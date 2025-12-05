@@ -5,8 +5,9 @@
 
 import chalk from 'chalk';
 import Table from 'cli-table3';
-import { StackCostEstimate, CostComparison, ResourceChange, ResourceCost } from './types';
+import { StackCostEstimate, CostComparison, ResourceChange, ResourceCost, CostDetail } from './types';
 import { DiffCalculator } from './diff-calculator';
+import { USAGE_BASED_RESOURCES } from './pricing-data';
 
 export type OutputFormat = 'table' | 'json' | 'markdown' | 'github';
 
@@ -100,7 +101,37 @@ export class OutputFormatter {
   }
   
   /**
-   * Format estimate as CLI table
+   * Format cost details into a short summary string
+   */
+  private formatCostDetails(details?: CostDetail[]): string | null {
+    if (!details || details.length === 0) return null;
+    
+    // Find the most significant cost component
+    const mainDetail = details.reduce((prev, current) => 
+      (current.monthlyCost > prev.monthlyCost) ? current : prev
+    , details[0]);
+    
+    if (mainDetail.quantity === 0 && mainDetail.monthlyCost === 0) return null;
+
+    // Format: "est. 100 GB", "est. 1M requests"
+    // Extract unit without "month" suffix for cleaner display
+    const unit = mainDetail.unit.replace('/month', '').replace('/mo', '');
+    
+    // Format quantity: 1000 -> 1k, 1000000 -> 1M
+    let quantityStr = mainDetail.quantity.toString();
+    if (mainDetail.quantity >= 1000000) {
+      quantityStr = `${(mainDetail.quantity / 1000000).toFixed(1)}M`;
+    } else if (mainDetail.quantity >= 1000) {
+      quantityStr = `${(mainDetail.quantity / 1000).toFixed(1)}k`;
+    } else {
+        quantityStr = mainDetail.quantity.toFixed(0);
+    }
+
+    return `est. ${quantityStr} ${unit}`;
+  }
+
+  /**
+   * Format estimate as CLI table with detailed breakdown
    */
   private formatEstimateTable(estimate: StackCostEstimate): string {
     const output: string[] = [];
@@ -113,21 +144,54 @@ export class OutputFormatter {
       const table = new Table({
         head: [
           chalk.bold.white('Resource'),
-          chalk.bold.white('Type'),
+          chalk.bold.white('Monthly Qty'),
+          chalk.bold.white('Unit'),
           chalk.bold.white('Monthly Cost'),
-          chalk.bold.white('Confidence'),
         ],
         style: { head: [], border: [] },
-        colWidths: [35, 40, 15, 12],
+        colWidths: [50, 15, 15, 15],
+        wordWrap: true
       });
       
       for (const resource of estimate.resources.sort((a, b) => b.monthlyCost - a.monthlyCost)) {
+        // Main resource row
         table.push([
-          this.truncate(resource.resourceId, 33),
-          this.truncate(this.simplifyType(resource.resourceType), 38),
-          this.formatCurrency(resource.monthlyCost),
-          this.colorConfidence(resource.confidence),
+          { content: chalk.bold(this.truncate(resource.resourceId, 48)), colSpan: 3 },
+          chalk.bold(this.formatCurrency(resource.monthlyCost))
         ]);
+
+        // Detail rows
+        if (resource.details && resource.details.length > 0) {
+          for (const [index, detail] of resource.details.entries()) {
+            const isLast = index === resource.details.length - 1;
+            const treeSymbol = isLast ? '└─' : '├─';
+            
+            // Format quantity
+            let quantityStr = detail.quantity.toString();
+            if (detail.quantity >= 1000000) {
+              quantityStr = `${(detail.quantity / 1000000).toFixed(1)}M`;
+            } else if (detail.quantity >= 1000) {
+              quantityStr = `${(detail.quantity / 1000).toFixed(1)}k`;
+            } else if (detail.quantity % 1 !== 0) {
+                quantityStr = detail.quantity.toFixed(2);
+            }
+
+            table.push([
+              chalk.gray(`  ${treeSymbol} ${detail.component}`),
+              chalk.gray(quantityStr),
+              chalk.gray(detail.unit),
+              chalk.gray(this.formatCurrency(detail.monthlyCost))
+            ]);
+          }
+        } else {
+            // No details available (shouldn't happen often with the new calculator)
+             table.push([
+              chalk.gray(`  └─ ${this.simplifyType(resource.resourceType)}`),
+              chalk.gray('1'),
+              chalk.gray(resource.unit),
+              chalk.gray(this.formatCurrency(resource.monthlyCost))
+            ]);
+        }
       }
       
       output.push(table.toString());
@@ -171,16 +235,44 @@ export class OutputFormatter {
           chalk.bold.white('Diff'),
         ],
         style: { head: [], border: [] },
-        colWidths: [3, 30, 35, 12, 12, 14],
+        colWidths: [3, 30, 35, 18, 18, 14],
       });
       
       for (const change of significantChanges.slice(0, 20)) { // Show top 20
+        const isUsageBased = USAGE_BASED_RESOURCES.has(change.resourceType);
+        
+        let beforeDisplay = change.changeType === 'added' ? '-' : this.formatCurrency(change.beforeCost);
+        let afterDisplay = change.changeType === 'removed' ? '-' : this.formatCurrency(change.afterCost);
+        
+        if (isUsageBased) {
+          if (change.changeType !== 'added') {
+            const details = this.formatCostDetails(change.beforeDetails);
+            if (details) {
+                beforeDisplay = `${this.formatCurrency(change.beforeCost)} (${details})`;
+            } else if (change.beforeCost > 0) {
+                beforeDisplay = `${beforeDisplay} + usage`;
+            } else {
+                beforeDisplay = 'Usage-based';
+            }
+          }
+          if (change.changeType !== 'removed') {
+             const details = this.formatCostDetails(change.afterDetails);
+             if (details) {
+                 afterDisplay = `${this.formatCurrency(change.afterCost)} (${details})`;
+             } else if (change.afterCost > 0) {
+                 afterDisplay = `${afterDisplay} + usage`;
+             } else {
+                 afterDisplay = 'Usage-based';
+             }
+          }
+        }
+
         table.push([
           this.getChangeIcon(change.changeType),
           this.truncate(change.resourceId, 28),
           this.truncate(this.simplifyType(change.resourceType), 33),
-          change.changeType === 'added' ? '-' : this.formatCurrency(change.beforeCost),
-          change.changeType === 'removed' ? '-' : this.formatCurrency(change.afterCost),
+          beforeDisplay,
+          afterDisplay,
           this.colorDifference(change.costDifference),
         ]);
       }
@@ -213,11 +305,29 @@ export class OutputFormatter {
     lines.push('');
     
     if (estimate.resources.length > 0) {
-      lines.push('| Resource | Type | Monthly Cost | Confidence |');
-      lines.push('|----------|------|-------------:|------------|');
+      lines.push('| Resource | Monthly Qty | Unit | Monthly Cost |');
+      lines.push('|----------|------------:|------|-------------:|');
       
       for (const resource of estimate.resources.sort((a, b) => b.monthlyCost - a.monthlyCost)) {
-        lines.push(`| ${resource.resourceId} | ${this.simplifyType(resource.resourceType)} | ${this.formatCurrency(resource.monthlyCost)} | ${resource.confidence} |`);
+        // Main resource row
+        lines.push(`| **${resource.resourceId}** | | | **${this.formatCurrency(resource.monthlyCost)}** |`);
+        
+        // Detail rows
+        if (resource.details && resource.details.length > 0) {
+          for (const detail of resource.details) {
+            // Format quantity
+            let quantityStr = detail.quantity.toString();
+            if (detail.quantity >= 1000000) {
+              quantityStr = `${(detail.quantity / 1000000).toFixed(1)}M`;
+            } else if (detail.quantity >= 1000) {
+              quantityStr = `${(detail.quantity / 1000).toFixed(1)}k`;
+            } else if (detail.quantity % 1 !== 0) {
+                quantityStr = detail.quantity.toFixed(2);
+            }
+
+            lines.push(`| &nbsp;&nbsp; └─ ${detail.component} | ${quantityStr} | ${detail.unit} | ${this.formatCurrency(detail.monthlyCost)} |`);
+          }
+        }
       }
     }
     
@@ -256,7 +366,35 @@ export class OutputFormatter {
       
       for (const change of significantChanges.slice(0, 30)) {
         const icon = this.getMarkdownChangeIcon(change.changeType);
-        lines.push(`| ${icon} | ${change.resourceId} | ${this.simplifyType(change.resourceType)} | ${change.changeType === 'added' ? '-' : this.formatCurrency(change.beforeCost)} | ${change.changeType === 'removed' ? '-' : this.formatCurrency(change.afterCost)} | ${this.formatDifference(change.costDifference)} |`);
+        const isUsageBased = USAGE_BASED_RESOURCES.has(change.resourceType);
+        
+        let beforeDisplay = change.changeType === 'added' ? '-' : this.formatCurrency(change.beforeCost);
+        let afterDisplay = change.changeType === 'removed' ? '-' : this.formatCurrency(change.afterCost);
+
+        if (isUsageBased) {
+            if (change.changeType !== 'added') {
+                const details = this.formatCostDetails(change.beforeDetails);
+                if (details) {
+                    beforeDisplay = `${this.formatCurrency(change.beforeCost)} <br>_(${details})_`;
+                } else if (change.beforeCost > 0) {
+                    beforeDisplay = `${this.formatCurrency(change.beforeCost)} + usage`;
+                } else {
+                    beforeDisplay = '_Usage-based_';
+                }
+            }
+            if (change.changeType !== 'removed') {
+                const details = this.formatCostDetails(change.afterDetails);
+                if (details) {
+                    afterDisplay = `${this.formatCurrency(change.afterCost)} <br>_(${details})_`;
+                } else if (change.afterCost > 0) {
+                    afterDisplay = `${this.formatCurrency(change.afterCost)} + usage`;
+                } else {
+                    afterDisplay = '_Usage-based_';
+                }
+            }
+        }
+
+        lines.push(`| ${icon} | ${change.resourceId} | ${this.simplifyType(change.resourceType)} | ${beforeDisplay} | ${afterDisplay} | ${this.formatDifference(change.costDifference)} |`);
       }
     }
     
@@ -313,7 +451,35 @@ export class OutputFormatter {
       
       for (const change of significantChanges.slice(0, 50)) {
         const icon = this.getMarkdownChangeIcon(change.changeType);
-        lines.push(`| ${icon} | \`${change.resourceId}\` | ${this.simplifyType(change.resourceType)} | ${change.changeType === 'added' ? '-' : this.formatCurrency(change.beforeCost)} | ${change.changeType === 'removed' ? '-' : this.formatCurrency(change.afterCost)} | ${this.formatDifference(change.costDifference)} |`);
+        const isUsageBased = USAGE_BASED_RESOURCES.has(change.resourceType);
+        
+        let beforeDisplay = change.changeType === 'added' ? '-' : this.formatCurrency(change.beforeCost);
+        let afterDisplay = change.changeType === 'removed' ? '-' : this.formatCurrency(change.afterCost);
+
+        if (isUsageBased) {
+            if (change.changeType !== 'added') {
+                const details = this.formatCostDetails(change.beforeDetails);
+                if (details) {
+                    beforeDisplay = `${this.formatCurrency(change.beforeCost)} <br>_(${details})_`;
+                } else if (change.beforeCost > 0) {
+                    beforeDisplay = `${this.formatCurrency(change.beforeCost)} + usage`;
+                } else {
+                    beforeDisplay = '_Usage-based_';
+                }
+            }
+            if (change.changeType !== 'removed') {
+                const details = this.formatCostDetails(change.afterDetails);
+                if (details) {
+                    afterDisplay = `${this.formatCurrency(change.afterCost)} <br>_(${details})_`;
+                } else if (change.afterCost > 0) {
+                    afterDisplay = `${this.formatCurrency(change.afterCost)} + usage`;
+                } else {
+                    afterDisplay = '_Usage-based_';
+                }
+            }
+        }
+
+        lines.push(`| ${icon} | \`${change.resourceId}\` | ${this.simplifyType(change.resourceType)} | ${beforeDisplay} | ${afterDisplay} | ${this.formatDifference(change.costDifference)} |`);
       }
       
       lines.push('');

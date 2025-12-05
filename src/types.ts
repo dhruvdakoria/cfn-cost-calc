@@ -71,6 +71,8 @@ export interface ResourceChange {
   beforeCost: number;
   afterCost: number;
   costDifference: number;
+  beforeDetails?: CostDetail[];
+  afterDetails?: CostDetail[];
 }
 
 export interface PricingRule {

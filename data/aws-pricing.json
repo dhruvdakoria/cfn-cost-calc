@@ -1,7 +1,7 @@
 {
   "us-east-1": {
     "region": "us-east-1",
-    "lastUpdated": "2025-12-05T07:23:45.726Z",
+    "lastUpdated": "2025-12-05T22:53:11.984Z",
     "ec2": {
       "instances": {
         "t3.nano": 0.0052,
@@ -185,7 +185,8 @@
         "inf1.24xlarge": 4.721,
         "x1.16xlarge": 6.669,
         "x1.32xlarge": 13.338
-      }
+      },
+      "hosts": {}
     },
     "ebs": {
       "volumes": {
@@ -197,7 +198,8 @@
         "standard": 0.05
       },
       "iops": {},
-      "throughput": {}
+      "throughput": {},
+      "snapshots": 0.05
     },
     "rds": {
       "instances": {
@@ -338,51 +340,6 @@
           "db.r6g.2xlarge": 0.859,
           "db.r6g.4xlarge": 1.718,
           "db.r6g.8xlarge": 3.437
-        },
-        "aurora-mysql": {
-          "db.t3.small": 0.053,
-          "db.t3.medium": 0.082,
-          "db.t3.large": 0.164,
-          "db.t4g.medium": 0.095,
-          "db.t4g.large": 0.19,
-          "db.r5.large": 0.377,
-          "db.r5.xlarge": 0.58,
-          "db.r5.2xlarge": 1.16,
-          "db.r5.4xlarge": 2.32,
-          "db.r5.8xlarge": 4.64,
-          "db.r5.12xlarge": 6.96,
-          "db.r6i.large": 0.29,
-          "db.r6i.xlarge": 0.58,
-          "db.r6i.2xlarge": 1.508,
-          "db.r6i.4xlarge": 3.016,
-          "db.r6i.8xlarge": 4.64,
-          "db.r6g.large": 0.338,
-          "db.r6g.xlarge": 0.675,
-          "db.r6g.2xlarge": 1.038,
-          "db.r6g.4xlarge": 2.076,
-          "db.r6g.8xlarge": 5.399
-        },
-        "aurora-postgresql": {
-          "db.t3.medium": 0.107,
-          "db.t3.large": 0.164,
-          "db.t4g.medium": 0.095,
-          "db.t4g.large": 0.19,
-          "db.r5.large": 0.29,
-          "db.r5.xlarge": 0.754,
-          "db.r5.2xlarge": 1.16,
-          "db.r5.4xlarge": 2.32,
-          "db.r5.8xlarge": 6.032,
-          "db.r5.12xlarge": 6.96,
-          "db.r6i.large": 0.377,
-          "db.r6i.xlarge": 0.754,
-          "db.r6i.2xlarge": 1.508,
-          "db.r6i.4xlarge": 3.016,
-          "db.r6i.8xlarge": 6.032,
-          "db.r6g.large": 0.338,
-          "db.r6g.xlarge": 0.675,
-          "db.r6g.2xlarge": 1.349,
-          "db.r6g.4xlarge": 2.699,
-          "db.r6g.8xlarge": 5.399
         }
       },
       "storage": {
@@ -391,6 +348,34 @@
         "io1": 0.23
       },
       "iops": 0.04
+    },
+    "aurora": {
+      "instances": {
+        "db.t3.small": 0.053,
+        "db.t3.medium": 0.107,
+        "db.t3.large": 0.164,
+        "db.t4g.medium": 0.095,
+        "db.t4g.large": 0.19,
+        "db.r5.large": 0.29,
+        "db.r5.xlarge": 0.754,
+        "db.r5.2xlarge": 1.16,
+        "db.r5.4xlarge": 2.32,
+        "db.r5.8xlarge": 6.032,
+        "db.r5.12xlarge": 6.96,
+        "db.r6i.large": 0.377,
+        "db.r6i.xlarge": 0.754,
+        "db.r6i.2xlarge": 1.508,
+        "db.r6i.4xlarge": 3.016,
+        "db.r6i.8xlarge": 6.032,
+        "db.r6g.large": 0.338,
+        "db.r6g.xlarge": 0.675,
+        "db.r6g.2xlarge": 1.349,
+        "db.r6g.4xlarge": 2.699,
+        "db.r6g.8xlarge": 5.399
+      },
+      "storage": 0.1,
+      "ioRequests": 0.2,
+      "backtrackChanges": 0.012
     },
     "elasticache": {
       "nodes": {
@@ -424,13 +409,61 @@
         "cache.r7g.2xlarge": 0.6984
       }
     },
-    "lambda": {
-      "requests": 0.19999999999999998,
-      "duration": 0.0000133334
+    "dynamodb": {
+      "readCapacity": 0,
+      "writeCapacity": 0,
+      "onDemandRead": 0,
+      "onDemandWrite": 0,
+      "storage": 0
+    },
+    "neptune": {
+      "instances": {
+        "db.t3.medium": 0.098,
+        "db.t4g.medium": 0.125,
+        "db.r5.large": 0.348,
+        "db.r5.xlarge": 0.939,
+        "db.r5.2xlarge": 1.879,
+        "db.r5.4xlarge": 2.784,
+        "db.r5.8xlarge": 7.516,
+        "db.r5.12xlarge": 8.352,
+        "db.r6g.large": 0.3287,
+        "db.r6g.xlarge": 0.6574,
+        "db.r6g.2xlarge": 1.3149,
+        "db.r6g.4xlarge": 3.566,
+        "db.r6g.8xlarge": 5.2842
+      },
+      "storage": 0
+    },
+    "documentdb": {
+      "instances": {
+        "db.t3.medium": 0.1404,
+        "db.t4g.medium": 0.07566,
+        "db.r5.large": 0.4986,
+        "db.r5.xlarge": 0.9972,
+        "db.r5.2xlarge": 1.9944,
+        "db.r5.4xlarge": 3.9888,
+        "db.r5.8xlarge": 4.8743,
+        "db.r6g.large": 0.2895,
+        "db.r6g.xlarge": 0.5789,
+        "db.r6g.2xlarge": 1.0526,
+        "db.r6g.4xlarge": 2.1052
+      },
+      "storage": 0.3
+    },
+    "redshift": {
+      "instances": {
+        "dc2.large": 0.25,
+        "dc2.8xlarge": 4.8,
+        "ds2.xlarge": 0.85,
+        "ds2.8xlarge": 6.8,
+        "ra3.xlplus": 1.086,
+        "ra3.4xlarge": 3.26,
+        "ra3.16xlarge": 13.04
+      }
     },
     "natGateway": {
-      "hourly": 0.045,
-      "perGB": 0.045
+      "hourly": 0,
+      "perGB": 0
     },
     "loadBalancer": {
       "alb": {
@@ -445,12 +478,82 @@
         "hourly": 0.025
       }
     },
-    "eks": {
-      "clusterHourly": 0.1
+    "vpcEndpoint": {
+      "hourly": 0,
+      "dataProcessed": 0
     },
-    "fargate": {
-      "vcpuHourly": 0.04048,
-      "memoryGBHourly": 0.000111
+    "vpnConnection": {
+      "hourly": 0.05,
+      "transitGatewayAttachment": 0.05,
+      "clientVpn": {
+        "endpointHourly": 0.05,
+        "connectionHourly": 0.05
+      }
+    },
+    "transitGateway": {
+      "hourly": 0.05,
+      "dataProcessed": 0.02,
+      "peering": 0.05
+    },
+    "trafficMirror": {
+      "sessionHourly": 0.15
+    },
+    "directConnect": {
+      "portHours": {},
+      "dataTransfer": 0.02
+    },
+    "globalAccelerator": {
+      "hourly": 0.025,
+      "dataTransfer": 0.015
+    },
+    "eks": {
+      "clusterHourly": 0
+    },
+    "ecs": {
+      "fargateVcpuHourly": 0.04048,
+      "fargateMemoryGBHourly": 0.000111
+    },
+    "ecr": {
+      "storage": 0
+    },
+    "lambda": {
+      "requests": 0.19999999999999998,
+      "duration": 0.00005001,
+      "durationArm": 0.0000133334
+    },
+    "apiGateway": {
+      "rest": 3.5,
+      "http": 0,
+      "websocket": 0
+    },
+    "stepFunctions": {
+      "standard": 0,
+      "express": 0
+    },
+    "s3": {
+      "standardStorage": 0.023,
+      "standardIAStorage": 0.0125,
+      "glacierStorage": 0,
+      "requests": {
+        "put": 0.005,
+        "get": 0.0004,
+        "lifecycle": 0.01
+      }
+    },
+    "efs": {
+      "standard": 0,
+      "ia": 0,
+      "provisionedThroughput": 6
+    },
+    "fsx": {
+      "lustre": 0.14,
+      "windows": 0.23,
+      "ontap": 0.25,
+      "openzfs": 0.09
+    },
+    "backup": {
+      "storage": 0.05,
+      "restoreStorage": 0.02
     },
     "opensearch": {
       "instances": {
@@ -476,110 +579,212 @@
         "c6g.large.search": 0.113,
         "c6g.xlarge.search": 0.226,
         "c6g.2xlarge.search": 0.452
+      },
+      "storage": 0.135,
+      "ultrawarmStorage": 0.024
+    },
+    "elasticsearch": {
+      "instances": {}
+    },
+    "kinesis": {
+      "shardHourly": 0,
+      "payloadUnit": 0,
+      "extendedRetention": 0.02,
+      "enhancedFanout": 0.015
+    },
+    "kinesisFirehose": {
+      "dataIngested": 0.029,
+      "formatConversion": 0.018
+    },
+    "glue": {
+      "dpuHour": 0,
+      "crawlerDpuHour": 0.44,
+      "catalogStorage": 1,
+      "catalogRequests": 1
+    },
+    "athena": {
+      "dataScanned": 0
+    },
+    "sqs": {
+      "standard": 0,
+      "fifo": 0
+    },
+    "sns": {
+      "publish": 0,
+      "deliveries": {
+        "http": 0.6,
+        "email": 2,
+        "sms": 0.75,
+        "lambda": 0,
+        "sqs": 0
       }
     },
-    "documentdb": {
-      "instances": {
-        "db.t3.medium": 0.1404,
-        "db.t4g.medium": 0.07566,
-        "db.r5.large": 0.4986,
-        "db.r5.xlarge": 0.9972,
-        "db.r5.2xlarge": 1.9944,
-        "db.r5.4xlarge": 3.9888,
-        "db.r5.8xlarge": 4.8743,
-        "db.r6g.large": 0.2895,
-        "db.r6g.xlarge": 0.5789,
-        "db.r6g.2xlarge": 1.0526,
-        "db.r6g.4xlarge": 2.1052
-      },
-      "storage": 0.3
+    "eventbridge": {
+      "customEvents": 0,
+      "partnerEvents": 1,
+      "archiveProcessed": 0.1,
+      "schemaDiscovery": 0.1
     },
-    "other": {
-      "dynamodb": {
-        "readCapacity": 0,
-        "writeCapacity": 0,
-        "onDemandRead": 0.25,
-        "onDemandWrite": 1.25,
-        "storage": 0.25
+    "mq": {
+      "instanceHourly": {},
+      "storage": 0
+    },
+    "msk": {
+      "instanceHourly": {},
+      "storage": 0
+    },
+    "directoryService": {
+      "simpleAD": {
+        "small": 0.05,
+        "large": 0.15
       },
-      "s3": {
-        "standardStorage": 0.023,
-        "standardIAStorage": 0.0125,
-        "glacierStorage": 0.004
-      },
-      "apiGateway": {
-        "rest": 3.5,
-        "http": 1,
-        "websocket": 1
-      },
-      "sqs": {
-        "standard": 0.4,
-        "fifo": 0.5
-      },
-      "sns": {
-        "publish": 0.5
-      },
-      "cloudwatch": {
-        "metrics": 0.3,
-        "alarmStandard": 0.1,
-        "alarmHighRes": 0.3,
-        "dashboards": 3,
-        "logsIngestion": 0.5,
-        "logsStorage": 0.03
-      },
-      "secretsManager": {
-        "secret": 0.4,
+      "microsoftAD": {
+        "standard": 0.12,
+        "enterprise": 0.4
+      }
+    },
+    "mwaa": {
+      "environment": {
+        "mw1.small": 0.49,
+        "mw1.medium": 0.99,
+        "mw1.large": 1.99
+      }
+    },
+    "kinesisAnalytics": {
+      "kpuHourly": 0.11,
+      "storage": 0.1
+    },
+    "ssm": {
+      "parameter": {
+        "standard": 0,
+        "advanced": 0.05,
         "apiCalls": 0.05
       },
-      "kms": {
-        "key": 1,
-        "requests": 0.03
+      "activation": {
+        "standard": 0,
+        "advanced": 0.00695
+      }
+    },
+    "secretsManager": {
+      "secret": 0,
+      "apiCalls": 0
+    },
+    "kms": {
+      "key": 0,
+      "requests": 0
+    },
+    "acm": {
+      "privateCertificate": 0.75
+    },
+    "waf": {
+      "webACL": 0,
+      "rule": 0,
+      "requests": 0
+    },
+    "guardDuty": {
+      "events": 4,
+      "s3Events": 0.8,
+      "eksEvents": 1.6
+    },
+    "macie": {
+      "bucketEvaluated": 0.1,
+      "dataScanned": 1
+    },
+    "cloudwatch": {
+      "metrics": 0,
+      "alarmStandard": 0,
+      "alarmHighRes": 0,
+      "dashboards": 0,
+      "logsIngestion": 0,
+      "logsStorage": 0,
+      "alarmAnomaly": 0.3,
+      "alarmComposite": 0.5,
+      "logsInsightsQueries": 0.005,
+      "contributorInsightsRules": 0.5,
+      "contributorInsightsEvents": 0.02
+    },
+    "cloudtrail": {
+      "managementEvents": 2,
+      "dataEvents": 0.1,
+      "insightsEvents": 0.35
+    },
+    "config": {
+      "configItems": 0.003,
+      "rules": 1,
+      "conformancePackRules": 0.001
+    },
+    "codebuild": {
+      "linuxSmall": 0.005,
+      "linuxMedium": 0.01,
+      "linuxLarge": 0.02,
+      "linux2xlarge": 0.04,
+      "armLarge": 0.015,
+      "gpuLarge": 0.18,
+      "windowsMedium": 0.02,
+      "windowsLarge": 0.04
+    },
+    "codepipeline": {
+      "activePipeline": 1,
+      "trialPipelines": 0
+    },
+    "cloudfront": {
+      "dataTransfer": {},
+      "requests": {
+        "http": 0.0075,
+        "https": 0.01
       },
-      "stepFunctions": {
-        "standard": 25,
-        "express": 1
+      "invalidations": 0.005,
+      "ssl": 600,
+      "originShield": 0.009,
+      "realtimeLogs": 0.01,
+      "functions": 0.1
+    },
+    "route53": {
+      "hostedZone": 0,
+      "queries": 0,
+      "healthChecks": {
+        "basic": 0.5,
+        "https": 0.75,
+        "string": 1,
+        "fast": 1
       },
-      "route53": {
-        "hostedZone": 0.5,
-        "queries": 0.4
-      },
-      "vpcEndpoint": {
-        "hourly": 0.01,
-        "dataProcessed": 0.01
-      },
+      "resolverEndpoint": 0.125,
+      "resolverQueries": 0.4
+    },
+    "sagemaker": {
+      "notebookInstances": {},
+      "trainingInstances": {},
+      "endpointInstances": {}
+    },
+    "transferFamily": {
+      "protocols": 0.3,
+      "dataProcessed": 0.04
+    },
+    "dms": {
+      "instances": {}
+    },
+    "iot": {
+      "connectivityMinutes": 0.08,
+      "messages": 1,
+      "ruleEngineActions": 0.15
+    },
+    "lightsail": {
+      "instances": {}
+    },
+    "beanstalk": {},
+    "fargate": {
+      "vcpuHourly": 0.04048,
+      "memoryGBHourly": 0.000111
+    },
+    "other": {
       "cognito": {
-        "mau": 0.0055
-      },
-      "eventBridge": {
-        "customEvents": 1
-      },
-      "kinesis": {
-        "shardHourly": 0.015,
-        "payloadUnit": 0.014
-      },
-      "efs": {
-        "standard": 0.3,
-        "ia": 0.016
-      },
-      "ecr": {
-        "storage": 0.1
-      },
-      "waf": {
-        "webACL": 5,
-        "rule": 1,
-        "requests": 0.6
-      },
-      "glue": {
-        "dpuHour": 0.44
-      },
-      "athena": {
-        "dataScanned": 5
+        "mau": 0
       }
     }
   },
   "ca-central-1": {
     "region": "ca-central-1",
-    "lastUpdated": "2025-12-05T07:24:35.721Z",
+    "lastUpdated": "2025-12-05T22:53:56.863Z",
     "ec2": {
       "instances": {
         "t3.nano": 0.0058,
@@ -758,7 +963,8 @@
         "inf1.24xlarge": 5.26,
         "x1.16xlarge": 7.336,
         "x1.32xlarge": 14.672
-      }
+      },
+      "hosts": {}
     },
     "ebs": {
       "volumes": {
@@ -770,7 +976,8 @@
         "standard": 0.055
       },
       "iops": {},
-      "throughput": {}
+      "throughput": {},
+      "snapshots": 0.05
     },
     "rds": {
       "instances": {
@@ -911,51 +1118,6 @@
           "db.r6g.2xlarge": 0.931,
           "db.r6g.4xlarge": 1.862,
           "db.r6g.8xlarge": 3.723
-        },
-        "aurora-mysql": {
-          "db.t3.small": 0.045,
-          "db.t3.medium": 0.117,
-          "db.t3.large": 0.234,
-          "db.t4g.medium": 0.103,
-          "db.t4g.large": 0.205,
-          "db.r5.large": 0.32,
-          "db.r5.xlarge": 0.64,
-          "db.r5.2xlarge": 1.28,
-          "db.r5.4xlarge": 3.328,
-          "db.r5.8xlarge": 5.12,
-          "db.r5.12xlarge": 7.68,
-          "db.r6i.large": 0.32,
-          "db.r6i.xlarge": 0.64,
-          "db.r6i.2xlarge": 1.28,
-          "db.r6i.4xlarge": 3.328,
-          "db.r6i.8xlarge": 6.656,
-          "db.r6g.large": 0.372,
-          "db.r6g.xlarge": 0.745,
-          "db.r6g.2xlarge": 1.146,
-          "db.r6g.4xlarge": 2.291,
-          "db.r6g.8xlarge": 5.957
-        },
-        "aurora-postgresql": {
-          "db.t3.medium": 0.117,
-          "db.t3.large": 0.18,
-          "db.t4g.medium": 0.103,
-          "db.t4g.large": 0.158,
-          "db.r5.large": 0.32,
-          "db.r5.xlarge": 0.64,
-          "db.r5.2xlarge": 1.664,
-          "db.r5.4xlarge": 2.56,
-          "db.r5.8xlarge": 5.12,
-          "db.r5.12xlarge": 7.68,
-          "db.r6i.large": 0.416,
-          "db.r6i.xlarge": 0.64,
-          "db.r6i.2xlarge": 1.28,
-          "db.r6i.4xlarge": 3.328,
-          "db.r6i.8xlarge": 6.656,
-          "db.r6g.large": 0.372,
-          "db.r6g.xlarge": 0.573,
-          "db.r6g.2xlarge": 1.146,
-          "db.r6g.4xlarge": 2.978,
-          "db.r6g.8xlarge": 5.957
         }
       },
       "storage": {
@@ -964,6 +1126,34 @@
         "io1": 0.127
       },
       "iops": 0.22
+    },
+    "aurora": {
+      "instances": {
+        "db.t3.small": 0.045,
+        "db.t3.medium": 0.117,
+        "db.t3.large": 0.18,
+        "db.t4g.medium": 0.103,
+        "db.t4g.large": 0.158,
+        "db.r5.large": 0.32,
+        "db.r5.xlarge": 0.64,
+        "db.r5.2xlarge": 1.664,
+        "db.r5.4xlarge": 2.56,
+        "db.r5.8xlarge": 5.12,
+        "db.r5.12xlarge": 7.68,
+        "db.r6i.large": 0.416,
+        "db.r6i.xlarge": 0.64,
+        "db.r6i.2xlarge": 1.28,
+        "db.r6i.4xlarge": 3.328,
+        "db.r6i.8xlarge": 6.656,
+        "db.r6g.large": 0.372,
+        "db.r6g.xlarge": 0.573,
+        "db.r6g.2xlarge": 1.146,
+        "db.r6g.4xlarge": 2.978,
+        "db.r6g.8xlarge": 5.957
+      },
+      "storage": 0.1,
+      "ioRequests": 0.2,
+      "backtrackChanges": 0.012
     },
     "elasticache": {
       "nodes": {
@@ -997,13 +1187,61 @@
         "cache.r7g.2xlarge": 0.954
       }
     },
-    "lambda": {
-      "requests": 0.6,
-      "duration": 0.0000133334
+    "dynamodb": {
+      "readCapacity": 0.000179,
+      "writeCapacity": 0,
+      "onDemandRead": 0,
+      "onDemandWrite": 0,
+      "storage": 0
+    },
+    "neptune": {
+      "instances": {
+        "db.t3.medium": 0.108,
+        "db.t4g.medium": 0.1025,
+        "db.r5.large": 0.518,
+        "db.r5.xlarge": 1.036,
+        "db.r5.2xlarge": 1.536,
+        "db.r5.4xlarge": 4.147,
+        "db.r5.8xlarge": 6.144,
+        "db.r5.12xlarge": 12.441,
+        "db.r6g.large": 0.3627,
+        "db.r6g.xlarge": 0.7254,
+        "db.r6g.2xlarge": 1.958,
+        "db.r6g.4xlarge": 3.935,
+        "db.r6g.8xlarge": 5.8308
+      },
+      "storage": 0
+    },
+    "documentdb": {
+      "instances": {
+        "db.t3.medium": 0.1548,
+        "db.t4g.medium": 0.08342,
+        "db.r5.large": 0.5508,
+        "db.r5.xlarge": 1.1016,
+        "db.r5.2xlarge": 1.224,
+        "db.r5.4xlarge": 4.4064,
+        "db.r5.8xlarge": 8.80128,
+        "db.r6g.large": 0.3198,
+        "db.r6g.xlarge": 0.6395,
+        "db.r6g.2xlarge": 1.1628,
+        "db.r6g.4xlarge": 2.5582
+      },
+      "storage": 0.11
+    },
+    "redshift": {
+      "instances": {
+        "dc2.large": 0.275,
+        "dc2.8xlarge": 5.28,
+        "ds2.xlarge": 0.935,
+        "ds2.8xlarge": 7.48,
+        "ra3.xlplus": 1.202,
+        "ra3.4xlarge": 3.607,
+        "ra3.16xlarge": 14.43
+      }
     },
     "natGateway": {
-      "hourly": 0.045,
-      "perGB": 0.045
+      "hourly": 0,
+      "perGB": 0
     },
     "loadBalancer": {
       "alb": {
@@ -1018,12 +1256,82 @@
         "hourly": 0.0275
       }
     },
-    "eks": {
-      "clusterHourly": 0.1
+    "vpcEndpoint": {
+      "hourly": 0,
+      "dataProcessed": 0
     },
-    "fargate": {
-      "vcpuHourly": 0.03565,
-      "memoryGBHourly": 0.004865
+    "vpnConnection": {
+      "hourly": 0.05,
+      "transitGatewayAttachment": 0.05,
+      "clientVpn": {
+        "endpointHourly": 0.05,
+        "connectionHourly": 0.05
+      }
+    },
+    "transitGateway": {
+      "hourly": 0.05,
+      "dataProcessed": 0.02,
+      "peering": 0.05
+    },
+    "trafficMirror": {
+      "sessionHourly": 0.15
+    },
+    "directConnect": {
+      "portHours": {},
+      "dataTransfer": 0.02
+    },
+    "globalAccelerator": {
+      "hourly": 0.025,
+      "dataTransfer": 0.015
+    },
+    "eks": {
+      "clusterHourly": 0
+    },
+    "ecs": {
+      "fargateVcpuHourly": 0.03565,
+      "fargateMemoryGBHourly": 0.004865
+    },
+    "ecr": {
+      "storage": 0
+    },
+    "lambda": {
+      "requests": 0.6,
+      "duration": 0.0000166667,
+      "durationArm": 0.0000133334
+    },
+    "apiGateway": {
+      "rest": 3.5,
+      "http": 0,
+      "websocket": 0
+    },
+    "stepFunctions": {
+      "standard": 0,
+      "express": 0
+    },
+    "s3": {
+      "standardStorage": 0.025,
+      "standardIAStorage": 0.01104,
+      "glacierStorage": 0,
+      "requests": {
+        "put": 0.005,
+        "get": 0.0004,
+        "lifecycle": 0.01
+      }
+    },
+    "efs": {
+      "standard": 0,
+      "ia": 0,
+      "provisionedThroughput": 6
+    },
+    "fsx": {
+      "lustre": 0.14,
+      "windows": 0.23,
+      "ontap": 0.25,
+      "openzfs": 0.09
+    },
+    "backup": {
+      "storage": 0.05,
+      "restoreStorage": 0.02
     },
     "opensearch": {
       "instances": {
@@ -1049,104 +1357,206 @@
         "c6g.large.search": 0.124,
         "c6g.xlarge.search": 0.247,
         "c6g.2xlarge.search": 0.494
+      },
+      "storage": 0.135,
+      "ultrawarmStorage": 0.024
+    },
+    "elasticsearch": {
+      "instances": {}
+    },
+    "kinesis": {
+      "shardHourly": 0,
+      "payloadUnit": 0,
+      "extendedRetention": 0.02,
+      "enhancedFanout": 0.015
+    },
+    "kinesisFirehose": {
+      "dataIngested": 0.029,
+      "formatConversion": 0.018
+    },
+    "glue": {
+      "dpuHour": 0,
+      "crawlerDpuHour": 0.44,
+      "catalogStorage": 1,
+      "catalogRequests": 1
+    },
+    "athena": {
+      "dataScanned": 0
+    },
+    "sqs": {
+      "standard": 0,
+      "fifo": 0
+    },
+    "sns": {
+      "publish": 0,
+      "deliveries": {
+        "http": 0.6,
+        "email": 2,
+        "sms": 0.75,
+        "lambda": 0,
+        "sqs": 0
       }
     },
-    "documentdb": {
-      "instances": {
-        "db.t3.medium": 0.1548,
-        "db.t4g.medium": 0.08342,
-        "db.r5.large": 0.5508,
-        "db.r5.xlarge": 1.1016,
-        "db.r5.2xlarge": 1.224,
-        "db.r5.4xlarge": 4.4064,
-        "db.r5.8xlarge": 8.80128,
-        "db.r6g.large": 0.3198,
-        "db.r6g.xlarge": 0.6395,
-        "db.r6g.2xlarge": 1.1628,
-        "db.r6g.4xlarge": 2.5582
-      },
-      "storage": 0.11
+    "eventbridge": {
+      "customEvents": 0,
+      "partnerEvents": 1,
+      "archiveProcessed": 0.1,
+      "schemaDiscovery": 0.1
     },
-    "other": {
-      "dynamodb": {
-        "readCapacity": 0.000179,
-        "writeCapacity": 0,
-        "onDemandRead": 0.25,
-        "onDemandWrite": 1.25,
-        "storage": 0.25
+    "mq": {
+      "instanceHourly": {},
+      "storage": 0
+    },
+    "msk": {
+      "instanceHourly": {},
+      "storage": 0
+    },
+    "directoryService": {
+      "simpleAD": {
+        "small": 0.05,
+        "large": 0.15
       },
-      "s3": {
-        "standardStorage": 0.025,
-        "standardIAStorage": 0.01104,
-        "glacierStorage": 0.004
-      },
-      "apiGateway": {
-        "rest": 3.5,
-        "http": 1,
-        "websocket": 1
-      },
-      "sqs": {
-        "standard": 0.4,
-        "fifo": 0.5
-      },
-      "sns": {
-        "publish": 0.5
-      },
-      "cloudwatch": {
-        "metrics": 0.3,
-        "alarmStandard": 0.1,
-        "alarmHighRes": 0.3,
-        "dashboards": 3,
-        "logsIngestion": 0.5,
-        "logsStorage": 0.03
-      },
-      "secretsManager": {
-        "secret": 0.4,
+      "microsoftAD": {
+        "standard": 0.12,
+        "enterprise": 0.4
+      }
+    },
+    "mwaa": {
+      "environment": {
+        "mw1.small": 0.49,
+        "mw1.medium": 0.99,
+        "mw1.large": 1.99
+      }
+    },
+    "kinesisAnalytics": {
+      "kpuHourly": 0.11,
+      "storage": 0.1
+    },
+    "ssm": {
+      "parameter": {
+        "standard": 0,
+        "advanced": 0.05,
         "apiCalls": 0.05
       },
-      "kms": {
-        "key": 1,
-        "requests": 0.03
+      "activation": {
+        "standard": 0,
+        "advanced": 0.00695
+      }
+    },
+    "secretsManager": {
+      "secret": 0,
+      "apiCalls": 0
+    },
+    "kms": {
+      "key": 0,
+      "requests": 0
+    },
+    "acm": {
+      "privateCertificate": 0.75
+    },
+    "waf": {
+      "webACL": 0,
+      "rule": 0,
+      "requests": 0
+    },
+    "guardDuty": {
+      "events": 4,
+      "s3Events": 0.8,
+      "eksEvents": 1.6
+    },
+    "macie": {
+      "bucketEvaluated": 0.1,
+      "dataScanned": 1
+    },
+    "cloudwatch": {
+      "metrics": 0,
+      "alarmStandard": 0,
+      "alarmHighRes": 0,
+      "dashboards": 0,
+      "logsIngestion": 0,
+      "logsStorage": 0,
+      "alarmAnomaly": 0.3,
+      "alarmComposite": 0.5,
+      "logsInsightsQueries": 0.005,
+      "contributorInsightsRules": 0.5,
+      "contributorInsightsEvents": 0.02
+    },
+    "cloudtrail": {
+      "managementEvents": 2,
+      "dataEvents": 0.1,
+      "insightsEvents": 0.35
+    },
+    "config": {
+      "configItems": 0.003,
+      "rules": 1,
+      "conformancePackRules": 0.001
+    },
+    "codebuild": {
+      "linuxSmall": 0.005,
+      "linuxMedium": 0.01,
+      "linuxLarge": 0.02,
+      "linux2xlarge": 0.04,
+      "armLarge": 0.015,
+      "gpuLarge": 0.18,
+      "windowsMedium": 0.02,
+      "windowsLarge": 0.04
+    },
+    "codepipeline": {
+      "activePipeline": 1,
+      "trialPipelines": 0
+    },
+    "cloudfront": {
+      "dataTransfer": {},
+      "requests": {
+        "http": 0.0075,
+        "https": 0.01
       },
-      "stepFunctions": {
-        "standard": 25,
-        "express": 1
+      "invalidations": 0.005,
+      "ssl": 600,
+      "originShield": 0.009,
+      "realtimeLogs": 0.01,
+      "functions": 0.1
+    },
+    "route53": {
+      "hostedZone": 0,
+      "queries": 0,
+      "healthChecks": {
+        "basic": 0.5,
+        "https": 0.75,
+        "string": 1,
+        "fast": 1
       },
-      "route53": {
-        "hostedZone": 0.5,
-        "queries": 0.4
-      },
-      "vpcEndpoint": {
-        "hourly": 0.01,
-        "dataProcessed": 0.01
-      },
+      "resolverEndpoint": 0.125,
+      "resolverQueries": 0.4
+    },
+    "sagemaker": {
+      "notebookInstances": {},
+      "trainingInstances": {},
+      "endpointInstances": {}
+    },
+    "transferFamily": {
+      "protocols": 0.3,
+      "dataProcessed": 0.04
+    },
+    "dms": {
+      "instances": {}
+    },
+    "iot": {
+      "connectivityMinutes": 0.08,
+      "messages": 1,
+      "ruleEngineActions": 0.15
+    },
+    "lightsail": {
+      "instances": {}
+    },
+    "beanstalk": {},
+    "fargate": {
+      "vcpuHourly": 0.03565,
+      "memoryGBHourly": 0.004865
+    },
+    "other": {
       "cognito": {
-        "mau": 0.0055
-      },
-      "eventBridge": {
-        "customEvents": 1
-      },
-      "kinesis": {
-        "shardHourly": 0.015,
-        "payloadUnit": 0.014
-      },
-      "efs": {
-        "standard": 0.3,
-        "ia": 0.016
-      },
-      "ecr": {
-        "storage": 0.1
-      },
-      "waf": {
-        "webACL": 5,
-        "rule": 1,
-        "requests": 0.6
-      },
-      "glue": {
-        "dpuHour": 0.44
-      },
-      "athena": {
-        "dataScanned": 5
+        "mau": 0
       }
     }
   }

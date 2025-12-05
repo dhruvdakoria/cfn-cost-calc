@@ -1,0 +1,1170 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Template containing all free resources",
+  "Resources": {
+    "AccessAnalyzerAnalyzer1": {
+      "Type": "AWS::AccessAnalyzer::Analyzer",
+      "Properties": {}
+    },
+    "AccessAnalyzerArchiveRule2": {
+      "Type": "AWS::AccessAnalyzer::ArchiveRule",
+      "Properties": {}
+    },
+    "CertificateManagerCertificate3": {
+      "Type": "AWS::CertificateManager::Certificate",
+      "Properties": {}
+    },
+    "ACMPCAPermission4": {
+      "Type": "AWS::ACMPCA::Permission",
+      "Properties": {}
+    },
+    "ACMPCAPolicy5": {
+      "Type": "AWS::ACMPCA::Policy",
+      "Properties": {}
+    },
+    "AccountAlternateContact6": {
+      "Type": "AWS::Account::AlternateContact",
+      "Properties": {}
+    },
+    "ElasticLoadBalancingV2ListenerCertificate7": {
+      "Type": "AWS::ElasticLoadBalancingV2::ListenerCertificate",
+      "Properties": {}
+    },
+    "ElasticLoadBalancingV2ListenerRule8": {
+      "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+      "Properties": {}
+    },
+    "ElasticLoadBalancingV2Listener9": {
+      "Type": "AWS::ElasticLoadBalancingV2::Listener",
+      "Properties": {}
+    },
+    "ElasticLoadBalancingV2TargetGroup10": {
+      "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+      "Properties": {}
+    },
+    "EC2AMI11": {
+      "Type": "AWS::EC2::AMI",
+      "Properties": {}
+    },
+    "AmplifyApp12": {
+      "Type": "AWS::Amplify::App",
+      "Properties": {}
+    },
+    "AmplifyBranch13": {
+      "Type": "AWS::Amplify::Branch",
+      "Properties": {}
+    },
+    "AmplifyDomain14": {
+      "Type": "AWS::Amplify::Domain",
+      "Properties": {}
+    },
+    "ApiGatewayAccount15": {
+      "Type": "AWS::ApiGateway::Account",
+      "Properties": {}
+    },
+    "ApiGatewayApiKey16": {
+      "Type": "AWS::ApiGateway::ApiKey",
+      "Properties": {}
+    },
+    "ApiGatewayAuthorizer17": {
+      "Type": "AWS::ApiGateway::Authorizer",
+      "Properties": {}
+    },
+    "ApiGatewayBasePathMapping18": {
+      "Type": "AWS::ApiGateway::BasePathMapping",
+      "Properties": {}
+    },
+    "ApiGatewayClientCertificate19": {
+      "Type": "AWS::ApiGateway::ClientCertificate",
+      "Properties": {}
+    },
+    "ApiGatewayDeployment20": {
+      "Type": "AWS::ApiGateway::Deployment",
+      "Properties": {}
+    },
+    "ApiGatewayDocumentationPart21": {
+      "Type": "AWS::ApiGateway::DocumentationPart",
+      "Properties": {}
+    },
+    "ApiGatewayDocumentationVersion22": {
+      "Type": "AWS::ApiGateway::DocumentationVersion",
+      "Properties": {}
+    },
+    "ApiGatewayDomainName23": {
+      "Type": "AWS::ApiGateway::DomainName",
+      "Properties": {}
+    },
+    "ApiGatewayGatewayResponse24": {
+      "Type": "AWS::ApiGateway::GatewayResponse",
+      "Properties": {}
+    },
+    "ApiGatewayIntegration25": {
+      "Type": "AWS::ApiGateway::Integration",
+      "Properties": {}
+    },
+    "ApiGatewayIntegrationResponse26": {
+      "Type": "AWS::ApiGateway::IntegrationResponse",
+      "Properties": {}
+    },
+    "ApiGatewayMethod27": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {}
+    },
+    "ApiGatewayMethodResponse28": {
+      "Type": "AWS::ApiGateway::MethodResponse",
+      "Properties": {}
+    },
+    "ApiGatewayModel29": {
+      "Type": "AWS::ApiGateway::Model",
+      "Properties": {}
+    },
+    "ApiGatewayRequestValidator30": {
+      "Type": "AWS::ApiGateway::RequestValidator",
+      "Properties": {}
+    },
+    "ApiGatewayResource31": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {}
+    },
+    "ApiGatewayRestApiPolicy32": {
+      "Type": "AWS::ApiGateway::RestApiPolicy",
+      "Properties": {}
+    },
+    "ApiGatewayUsagePlan33": {
+      "Type": "AWS::ApiGateway::UsagePlan",
+      "Properties": {}
+    },
+    "ApiGatewayUsagePlanKey34": {
+      "Type": "AWS::ApiGateway::UsagePlanKey",
+      "Properties": {}
+    },
+    "ApiGatewayVpcLink35": {
+      "Type": "AWS::ApiGateway::VpcLink",
+      "Properties": {}
+    },
+    "ApiGatewayV2ApiMapping36": {
+      "Type": "AWS::ApiGatewayV2::ApiMapping",
+      "Properties": {}
+    },
+    "ApiGatewayV2Authorizer37": {
+      "Type": "AWS::ApiGatewayV2::Authorizer",
+      "Properties": {}
+    },
+    "ApiGatewayV2Deployment38": {
+      "Type": "AWS::ApiGatewayV2::Deployment",
+      "Properties": {}
+    },
+    "ApiGatewayV2DomainName39": {
+      "Type": "AWS::ApiGatewayV2::DomainName",
+      "Properties": {}
+    },
+    "ApiGatewayV2Integration40": {
+      "Type": "AWS::ApiGatewayV2::Integration",
+      "Properties": {}
+    },
+    "ApiGatewayV2IntegrationResponse41": {
+      "Type": "AWS::ApiGatewayV2::IntegrationResponse",
+      "Properties": {}
+    },
+    "ApiGatewayV2Model42": {
+      "Type": "AWS::ApiGatewayV2::Model",
+      "Properties": {}
+    },
+    "ApiGatewayV2Route43": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {}
+    },
+    "ApiGatewayV2RouteResponse44": {
+      "Type": "AWS::ApiGatewayV2::RouteResponse",
+      "Properties": {}
+    },
+    "ApiGatewayV2Stage45": {
+      "Type": "AWS::ApiGatewayV2::Stage",
+      "Properties": {}
+    },
+    "ApiGatewayV2VpcLink46": {
+      "Type": "AWS::ApiGatewayV2::VpcLink",
+      "Properties": {}
+    },
+    "ApplicationAutoScalingScalingPolicy47": {
+      "Type": "AWS::ApplicationAutoScaling::ScalingPolicy",
+      "Properties": {}
+    },
+    "ApplicationAutoScalingScheduledAction48": {
+      "Type": "AWS::ApplicationAutoScaling::ScheduledAction",
+      "Properties": {}
+    },
+    "AppConfigExtension49": {
+      "Type": "AWS::AppConfig::Extension",
+      "Properties": {}
+    },
+    "AppConfigExtensionAssociation50": {
+      "Type": "AWS::AppConfig::ExtensionAssociation",
+      "Properties": {}
+    },
+    "AppConfigHostedConfigurationVersion51": {
+      "Type": "AWS::AppConfig::HostedConfigurationVersion",
+      "Properties": {}
+    },
+    "AppFlowConnectorProfile52": {
+      "Type": "AWS::AppFlow::ConnectorProfile",
+      "Properties": {}
+    },
+    "AppIntegrationsEventIntegration53": {
+      "Type": "AWS::AppIntegrations::EventIntegration",
+      "Properties": {}
+    },
+    "AppMeshGatewayRoute54": {
+      "Type": "AWS::AppMesh::GatewayRoute",
+      "Properties": {}
+    },
+    "AppMeshMesh55": {
+      "Type": "AWS::AppMesh::Mesh",
+      "Properties": {}
+    },
+    "AppMeshRoute56": {
+      "Type": "AWS::AppMesh::Route",
+      "Properties": {}
+    },
+    "AppMeshVirtualGateway57": {
+      "Type": "AWS::AppMesh::VirtualGateway",
+      "Properties": {}
+    },
+    "AppMeshVirtualNode58": {
+      "Type": "AWS::AppMesh::VirtualNode",
+      "Properties": {}
+    },
+    "AppMeshVirtualRouter59": {
+      "Type": "AWS::AppMesh::VirtualRouter",
+      "Properties": {}
+    },
+    "AppMeshVirtualService60": {
+      "Type": "AWS::AppMesh::VirtualService",
+      "Properties": {}
+    },
+    "AutoScalingLifecycleHook61": {
+      "Type": "AWS::AutoScaling::LifecycleHook",
+      "Properties": {}
+    },
+    "AutoScalingNotificationConfiguration62": {
+      "Type": "AWS::AutoScaling::NotificationConfiguration",
+      "Properties": {}
+    },
+    "AutoScalingScalingPolicy63": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {}
+    },
+    "EC2PlacementGroup64": {
+      "Type": "AWS::EC2::PlacementGroup",
+      "Properties": {}
+    },
+    "BackupBackupPlan65": {
+      "Type": "AWS::Backup::BackupPlan",
+      "Properties": {}
+    },
+    "BackupBackupSelection66": {
+      "Type": "AWS::Backup::BackupSelection",
+      "Properties": {}
+    },
+    "BackupGlobalSettings67": {
+      "Type": "AWS::Backup::GlobalSettings",
+      "Properties": {}
+    },
+    "BackupRegionSettings68": {
+      "Type": "AWS::Backup::RegionSettings",
+      "Properties": {}
+    },
+    "BackupBackupVaultNotifications69": {
+      "Type": "AWS::Backup::BackupVaultNotifications",
+      "Properties": {}
+    },
+    "BackupBackupVaultPolicy70": {
+      "Type": "AWS::Backup::BackupVaultPolicy",
+      "Properties": {}
+    },
+    "CloudFormationStackSet71": {
+      "Type": "AWS::CloudFormation::StackSet",
+      "Properties": {}
+    },
+    "CloudFormationResourceVersion72": {
+      "Type": "AWS::CloudFormation::ResourceVersion",
+      "Properties": {}
+    },
+    "CloudFrontOriginAccessIdentity73": {
+      "Type": "AWS::CloudFront::OriginAccessIdentity",
+      "Properties": {}
+    },
+    "CloudFrontPublicKey74": {
+      "Type": "AWS::CloudFront::PublicKey",
+      "Properties": {}
+    },
+    "EventsRule75": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {}
+    },
+    "EventsEventBus76": {
+      "Type": "AWS::Events::EventBus",
+      "Properties": {}
+    },
+    "LogsDestination77": {
+      "Type": "AWS::Logs::Destination",
+      "Properties": {}
+    },
+    "LogsDestinationPolicy78": {
+      "Type": "AWS::Logs::DestinationPolicy",
+      "Properties": {}
+    },
+    "LogsMetricFilter79": {
+      "Type": "AWS::Logs::MetricFilter",
+      "Properties": {}
+    },
+    "LogsResourcePolicy80": {
+      "Type": "AWS::Logs::ResourcePolicy",
+      "Properties": {}
+    },
+    "LogsLogStream81": {
+      "Type": "AWS::Logs::LogStream",
+      "Properties": {}
+    },
+    "LogsSubscriptionFilter82": {
+      "Type": "AWS::Logs::SubscriptionFilter",
+      "Properties": {}
+    },
+    "CodeBuildReportGroup83": {
+      "Type": "AWS::CodeBuild::ReportGroup",
+      "Properties": {}
+    },
+    "CodeBuildSourceCredential84": {
+      "Type": "AWS::CodeBuild::SourceCredential",
+      "Properties": {}
+    },
+    "ConfigAggregationAuthorization85": {
+      "Type": "AWS::Config::AggregationAuthorization",
+      "Properties": {}
+    },
+    "ConfigConfigurationAggregator86": {
+      "Type": "AWS::Config::ConfigurationAggregator",
+      "Properties": {}
+    },
+    "ConfigConfigurationRecorderStatus87": {
+      "Type": "AWS::Config::ConfigurationRecorderStatus",
+      "Properties": {}
+    },
+    "ConfigDeliveryChannel88": {
+      "Type": "AWS::Config::DeliveryChannel",
+      "Properties": {}
+    },
+    "ConfigRemediationConfiguration89": {
+      "Type": "AWS::Config::RemediationConfiguration",
+      "Properties": {}
+    },
+    "EC2CustomerGateway90": {
+      "Type": "AWS::EC2::CustomerGateway",
+      "Properties": {}
+    },
+    "RDSDBInstanceRoleAssociation91": {
+      "Type": "AWS::RDS::DBInstanceRoleAssociation",
+      "Properties": {}
+    },
+    "RDSOptionGroup92": {
+      "Type": "AWS::RDS::OptionGroup",
+      "Properties": {}
+    },
+    "RDSDBParameterGroup93": {
+      "Type": "AWS::RDS::DBParameterGroup",
+      "Properties": {}
+    },
+    "RDSDBSubnetGroup94": {
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {}
+    },
+    "EC2NetworkAcl95": {
+      "Type": "AWS::EC2::NetworkAcl",
+      "Properties": {}
+    },
+    "EC2RouteTable96": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {}
+    },
+    "EC2SecurityGroup97": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {}
+    },
+    "EC2Subnet98": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {}
+    },
+    "EC2DHCPOptions99": {
+      "Type": "AWS::EC2::DHCPOptions",
+      "Properties": {}
+    },
+    "EC2VPC100": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {}
+    },
+    "DMSReplicationSubnetGroup101": {
+      "Type": "AWS::DMS::ReplicationSubnetGroup",
+      "Properties": {}
+    },
+    "DMSReplicationTask102": {
+      "Type": "AWS::DMS::ReplicationTask",
+      "Properties": {}
+    },
+    "DocDBDBClusterParameterGroup103": {
+      "Type": "AWS::DocDB::DBClusterParameterGroup",
+      "Properties": {}
+    },
+    "DocDBDBSubnetGroup104": {
+      "Type": "AWS::DocDB::DBSubnetGroup",
+      "Properties": {}
+    },
+    "DirectConnectBGPPeer105": {
+      "Type": "AWS::DirectConnect::BGPPeer",
+      "Properties": {}
+    },
+    "DirectConnectGatewayAssociationProposal106": {
+      "Type": "AWS::DirectConnect::GatewayAssociationProposal",
+      "Properties": {}
+    },
+    "DirectConnectDirectConnectGateway107": {
+      "Type": "AWS::DirectConnect::DirectConnectGateway",
+      "Properties": {}
+    },
+    "DirectConnectHostedPrivateVirtualInterfaceAccepter108": {
+      "Type": "AWS::DirectConnect::HostedPrivateVirtualInterfaceAccepter",
+      "Properties": {}
+    },
+    "DirectConnectHostedPrivateVirtualInterface109": {
+      "Type": "AWS::DirectConnect::HostedPrivateVirtualInterface",
+      "Properties": {}
+    },
+    "DirectConnectHostedPublicVirtualInterfaceAccepter110": {
+      "Type": "AWS::DirectConnect::HostedPublicVirtualInterfaceAccepter",
+      "Properties": {}
+    },
+    "DirectConnectHostedPublicVirtualInterface111": {
+      "Type": "AWS::DirectConnect::HostedPublicVirtualInterface",
+      "Properties": {}
+    },
+    "DirectConnectHostedTransitVirtualInterfaceAccepter112": {
+      "Type": "AWS::DirectConnect::HostedTransitVirtualInterfaceAccepter",
+      "Properties": {}
+    },
+    "DirectConnectHostedTransitVirtualInterface113": {
+      "Type": "AWS::DirectConnect::HostedTransitVirtualInterface",
+      "Properties": {}
+    },
+    "DirectConnectLag114": {
+      "Type": "AWS::DirectConnect::Lag",
+      "Properties": {}
+    },
+    "DirectConnectPrivateVirtualInterface115": {
+      "Type": "AWS::DirectConnect::PrivateVirtualInterface",
+      "Properties": {}
+    },
+    "DirectConnectPublicVirtualInterface116": {
+      "Type": "AWS::DirectConnect::PublicVirtualInterface",
+      "Properties": {}
+    },
+    "DirectConnectTransitVirtualInterface117": {
+      "Type": "AWS::DirectConnect::TransitVirtualInterface",
+      "Properties": {}
+    },
+    "DynamoDBTableItem118": {
+      "Type": "AWS::DynamoDB::TableItem",
+      "Properties": {}
+    },
+    "EC2EncryptionByDefault119": {
+      "Type": "AWS::EC2::EncryptionByDefault",
+      "Properties": {}
+    },
+    "EC2ClientVpnAuthorizationRule120": {
+      "Type": "AWS::EC2::ClientVpnAuthorizationRule",
+      "Properties": {}
+    },
+    "EC2ClientVpnRoute121": {
+      "Type": "AWS::EC2::ClientVpnRoute",
+      "Properties": {}
+    },
+    "EC2Tag122": {
+      "Type": "AWS::EC2::Tag",
+      "Properties": {}
+    },
+    "EC2TrafficMirrorFilterRule123": {
+      "Type": "AWS::EC2::TrafficMirrorFilterRule",
+      "Properties": {}
+    },
+    "EC2TrafficMirrorFilter124": {
+      "Type": "AWS::EC2::TrafficMirrorFilter",
+      "Properties": {}
+    },
+    "EC2TrafficMirrorTarget125": {
+      "Type": "AWS::EC2::TrafficMirrorTarget",
+      "Properties": {}
+    },
+    "EC2TransitGateway126": {
+      "Type": "AWS::EC2::TransitGateway",
+      "Properties": {}
+    },
+    "EC2TransitGatewayPeeringAttachmentAccepter127": {
+      "Type": "AWS::EC2::TransitGatewayPeeringAttachmentAccepter",
+      "Properties": {}
+    },
+    "EC2TransitGatewayRouteTable128": {
+      "Type": "AWS::EC2::TransitGatewayRouteTable",
+      "Properties": {}
+    },
+    "EC2TransitGatewayRouteTableAssociation129": {
+      "Type": "AWS::EC2::TransitGatewayRouteTableAssociation",
+      "Properties": {}
+    },
+    "EC2TransitGatewayRouteTablePropagation130": {
+      "Type": "AWS::EC2::TransitGatewayRouteTablePropagation",
+      "Properties": {}
+    },
+    "EC2TransitGatewayRoute131": {
+      "Type": "AWS::EC2::TransitGatewayRoute",
+      "Properties": {}
+    },
+    "EC2TransitGatewayVpcAttachmentAccepter132": {
+      "Type": "AWS::EC2::TransitGatewayVpcAttachmentAccepter",
+      "Properties": {}
+    },
+    "ECRLifecyclePolicy133": {
+      "Type": "AWS::ECR::LifecyclePolicy",
+      "Properties": {}
+    },
+    "ECRRepositoryPolicy134": {
+      "Type": "AWS::ECR::RepositoryPolicy",
+      "Properties": {}
+    },
+    "ECSAccountSettingDefault135": {
+      "Type": "AWS::ECS::AccountSettingDefault",
+      "Properties": {}
+    },
+    "ECSCapacityProvider136": {
+      "Type": "AWS::ECS::CapacityProvider",
+      "Properties": {}
+    },
+    "ECSCluster137": {
+      "Type": "AWS::ECS::Cluster",
+      "Properties": {}
+    },
+    "ECSTaskDefinition138": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {}
+    },
+    "EC2EgressOnlyInternetGateway139": {
+      "Type": "AWS::EC2::EgressOnlyInternetGateway",
+      "Properties": {}
+    },
+    "EFSAccessPoint140": {
+      "Type": "AWS::EFS::AccessPoint",
+      "Properties": {}
+    },
+    "EFSFileSystemPolicy141": {
+      "Type": "AWS::EFS::FileSystemPolicy",
+      "Properties": {}
+    },
+    "EFSMountTarget142": {
+      "Type": "AWS::EFS::MountTarget",
+      "Properties": {}
+    },
+    "EC2EIPAssociation143": {
+      "Type": "AWS::EC2::EIPAssociation",
+      "Properties": {}
+    },
+    "EKSAddon144": {
+      "Type": "AWS::EKS::Addon",
+      "Properties": {}
+    },
+    "EKSIdentityProviderConfig145": {
+      "Type": "AWS::EKS::IdentityProviderConfig",
+      "Properties": {}
+    },
+    "ElastiCacheParameterGroup146": {
+      "Type": "AWS::ElastiCache::ParameterGroup",
+      "Properties": {}
+    },
+    "ElastiCacheSecurityGroup147": {
+      "Type": "AWS::ElastiCache::SecurityGroup",
+      "Properties": {}
+    },
+    "ElastiCacheSubnetGroup148": {
+      "Type": "AWS::ElastiCache::SubnetGroup",
+      "Properties": {}
+    },
+    "ElastiCacheUser149": {
+      "Type": "AWS::ElastiCache::User",
+      "Properties": {}
+    },
+    "ElastiCacheUserGroup150": {
+      "Type": "AWS::ElastiCache::UserGroup",
+      "Properties": {}
+    },
+    "ElastiCacheUserGroupAssociation151": {
+      "Type": "AWS::ElastiCache::UserGroupAssociation",
+      "Properties": {}
+    },
+    "ElasticsearchDomainPolicy152": {
+      "Type": "AWS::Elasticsearch::DomainPolicy",
+      "Properties": {}
+    },
+    "ElasticBeanstalkApplication153": {
+      "Type": "AWS::ElasticBeanstalk::Application",
+      "Properties": {}
+    },
+    "ElasticLoadBalancingLoadBalancerAttachment154": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancerAttachment",
+      "Properties": {}
+    },
+    "EC2FlowLog155": {
+      "Type": "AWS::EC2::FlowLog",
+      "Properties": {}
+    },
+    "GlueTable156": {
+      "Type": "AWS::Glue::Table",
+      "Properties": {}
+    },
+    "GlueClassifier157": {
+      "Type": "AWS::Glue::Classifier",
+      "Properties": {}
+    },
+    "GlueConnection158": {
+      "Type": "AWS::Glue::Connection",
+      "Properties": {}
+    },
+    "GlueDataCatalogEncryptionSettings159": {
+      "Type": "AWS::Glue::DataCatalogEncryptionSettings",
+      "Properties": {}
+    },
+    "GluePartition160": {
+      "Type": "AWS::Glue::Partition",
+      "Properties": {}
+    },
+    "GluePartitionIndex161": {
+      "Type": "AWS::Glue::PartitionIndex",
+      "Properties": {}
+    },
+    "GlueRegistry162": {
+      "Type": "AWS::Glue::Registry",
+      "Properties": {}
+    },
+    "GlueResourcePolicy163": {
+      "Type": "AWS::Glue::ResourcePolicy",
+      "Properties": {}
+    },
+    "GlueSchema164": {
+      "Type": "AWS::Glue::Schema",
+      "Properties": {}
+    },
+    "GlueSecurityConfiguration165": {
+      "Type": "AWS::Glue::SecurityConfiguration",
+      "Properties": {}
+    },
+    "GlueTrigger166": {
+      "Type": "AWS::Glue::Trigger",
+      "Properties": {}
+    },
+    "GlueUserDefinedFunction167": {
+      "Type": "AWS::Glue::UserDefinedFunction",
+      "Properties": {}
+    },
+    "GlueWorkflow168": {
+      "Type": "AWS::Glue::Workflow",
+      "Properties": {}
+    },
+    "IAMAccessKey169": {
+      "Type": "AWS::IAM::AccessKey",
+      "Properties": {}
+    },
+    "IAMAccountAlias170": {
+      "Type": "AWS::IAM::AccountAlias",
+      "Properties": {}
+    },
+    "IAMAccountPasswordPolicy171": {
+      "Type": "AWS::IAM::AccountPasswordPolicy",
+      "Properties": {}
+    },
+    "IAMGroup172": {
+      "Type": "AWS::IAM::Group",
+      "Properties": {}
+    },
+    "IAMGroupPolicy173": {
+      "Type": "AWS::IAM::GroupPolicy",
+      "Properties": {}
+    },
+    "IAMInstanceProfile174": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {}
+    },
+    "IAMManagedPolicy175": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {}
+    },
+    "IAMOIDCProvider176": {
+      "Type": "AWS::IAM::OIDCProvider",
+      "Properties": {}
+    },
+    "IAMPolicy177": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {}
+    },
+    "IAMRole178": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {}
+    },
+    "IAMRolePolicy179": {
+      "Type": "AWS::IAM::RolePolicy",
+      "Properties": {}
+    },
+    "IAMSAMLProvider180": {
+      "Type": "AWS::IAM::SAMLProvider",
+      "Properties": {}
+    },
+    "IAMServerCertificate181": {
+      "Type": "AWS::IAM::ServerCertificate",
+      "Properties": {}
+    },
+    "IAMServiceLinkedRole182": {
+      "Type": "AWS::IAM::ServiceLinkedRole",
+      "Properties": {}
+    },
+    "IAMUser183": {
+      "Type": "AWS::IAM::User",
+      "Properties": {}
+    },
+    "IAMUserPolicy184": {
+      "Type": "AWS::IAM::UserPolicy",
+      "Properties": {}
+    },
+    "IAMUserToGroupAddition185": {
+      "Type": "AWS::IAM::UserToGroupAddition",
+      "Properties": {}
+    },
+    "EC2InternetGateway186": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {}
+    },
+    "IoTPolicy187": {
+      "Type": "AWS::IoT::Policy",
+      "Properties": {}
+    },
+    "EC2KeyPair188": {
+      "Type": "AWS::EC2::KeyPair",
+      "Properties": {}
+    },
+    "KMSAlias189": {
+      "Type": "AWS::KMS::Alias",
+      "Properties": {}
+    },
+    "KMSCiphertext190": {
+      "Type": "AWS::KMS::Ciphertext",
+      "Properties": {}
+    },
+    "KMSGrant191": {
+      "Type": "AWS::KMS::Grant",
+      "Properties": {}
+    },
+    "LambdaAlias192": {
+      "Type": "AWS::Lambda::Alias",
+      "Properties": {}
+    },
+    "LambdaCodeSigningConfig193": {
+      "Type": "AWS::Lambda::CodeSigningConfig",
+      "Properties": {}
+    },
+    "LambdaEventSourceMapping194": {
+      "Type": "AWS::Lambda::EventSourceMapping",
+      "Properties": {}
+    },
+    "LambdaEventInvokeConfig195": {
+      "Type": "AWS::Lambda::EventInvokeConfig",
+      "Properties": {}
+    },
+    "LambdaLayerVersion196": {
+      "Type": "AWS::Lambda::LayerVersion",
+      "Properties": {}
+    },
+    "LambdaLayerVersionPermission197": {
+      "Type": "AWS::Lambda::LayerVersionPermission",
+      "Properties": {}
+    },
+    "LambdaPermission198": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {}
+    },
+    "AutoScalingLaunchConfiguration199": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {}
+    },
+    "EC2LaunchTemplate200": {
+      "Type": "AWS::EC2::LaunchTemplate",
+      "Properties": {}
+    },
+    "ElasticLoadBalancingLoadBalancerCookieStickinessPolicy201": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancerCookieStickinessPolicy",
+      "Properties": {}
+    },
+    "LightsailDomain202": {
+      "Type": "AWS::Lightsail::Domain",
+      "Properties": {}
+    },
+    "LightsailKeyPair203": {
+      "Type": "AWS::Lightsail::KeyPair",
+      "Properties": {}
+    },
+    "LightsailStaticIp204": {
+      "Type": "AWS::Lightsail::StaticIp",
+      "Properties": {}
+    },
+    "LightsailStaticIpAttachment205": {
+      "Type": "AWS::Lightsail::StaticIpAttachment",
+      "Properties": {}
+    },
+    "ElasticLoadBalancingLoadBalancerPolicy206": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancerPolicy",
+      "Properties": {}
+    },
+    "EC2MainRouteTableAssociation207": {
+      "Type": "AWS::EC2::MainRouteTableAssociation",
+      "Properties": {}
+    },
+    "AmazonMQConfiguration208": {
+      "Type": "AWS::AmazonMQ::Configuration",
+      "Properties": {}
+    },
+    "MSKConfiguration209": {
+      "Type": "AWS::MSK::Configuration",
+      "Properties": {}
+    },
+    "NeptuneDBClusterParameterGroup210": {
+      "Type": "AWS::Neptune::DBClusterParameterGroup",
+      "Properties": {}
+    },
+    "NeptuneEventSubscription211": {
+      "Type": "AWS::Neptune::EventSubscription",
+      "Properties": {}
+    },
+    "NeptuneDBParameterGroup212": {
+      "Type": "AWS::Neptune::DBParameterGroup",
+      "Properties": {}
+    },
+    "NeptuneDBSubnetGroup213": {
+      "Type": "AWS::Neptune::DBSubnetGroup",
+      "Properties": {}
+    },
+    "EC2NetworkAclEntry214": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {}
+    },
+    "EC2NetworkInterfaceAttachment215": {
+      "Type": "AWS::EC2::NetworkInterfaceAttachment",
+      "Properties": {}
+    },
+    "EC2NetworkInterface216": {
+      "Type": "AWS::EC2::NetworkInterface",
+      "Properties": {}
+    },
+    "NetworkFirewallRuleGroup217": {
+      "Type": "AWS::NetworkFirewall::RuleGroup",
+      "Properties": {}
+    },
+    "NetworkFirewallFirewallPolicy218": {
+      "Type": "AWS::NetworkFirewall::FirewallPolicy",
+      "Properties": {}
+    },
+    "NetworkFirewallLoggingConfiguration219": {
+      "Type": "AWS::NetworkFirewall::LoggingConfiguration",
+      "Properties": {}
+    },
+    "RAMPrincipalAssociation220": {
+      "Type": "AWS::RAM::PrincipalAssociation",
+      "Properties": {}
+    },
+    "RAMResourceAssociation221": {
+      "Type": "AWS::RAM::ResourceAssociation",
+      "Properties": {}
+    },
+    "RAMResourceShareAccepter222": {
+      "Type": "AWS::RAM::ResourceShareAccepter",
+      "Properties": {}
+    },
+    "RAMResourceShare223": {
+      "Type": "AWS::RAM::ResourceShare",
+      "Properties": {}
+    },
+    "RDSDBClusterEndpoint224": {
+      "Type": "AWS::RDS::DBClusterEndpoint",
+      "Properties": {}
+    },
+    "RDSDBClusterParameterGroup225": {
+      "Type": "AWS::RDS::DBClusterParameterGroup",
+      "Properties": {}
+    },
+    "ResourceGroupsGroup226": {
+      "Type": "AWS::ResourceGroups::Group",
+      "Properties": {}
+    },
+    "Route53ResolverDNSSECConfig227": {
+      "Type": "AWS::Route53Resolver::DNSSECConfig",
+      "Properties": {}
+    },
+    "Route53ResolverQueryLoggingConfigAssociation228": {
+      "Type": "AWS::Route53Resolver::QueryLoggingConfigAssociation",
+      "Properties": {}
+    },
+    "Route53ResolverQueryLoggingConfig229": {
+      "Type": "AWS::Route53Resolver::QueryLoggingConfig",
+      "Properties": {}
+    },
+    "Route53ResolverResolverRuleAssociation230": {
+      "Type": "AWS::Route53Resolver::ResolverRuleAssociation",
+      "Properties": {}
+    },
+    "Route53ResolverResolverRule231": {
+      "Type": "AWS::Route53Resolver::ResolverRule",
+      "Properties": {}
+    },
+    "Route53HostedZoneVPCAssociation232": {
+      "Type": "AWS::Route53::HostedZoneVPCAssociation",
+      "Properties": {}
+    },
+    "EC2SubnetRouteTableAssociation233": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {}
+    },
+    "EC2Route234": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {}
+    },
+    "S3AccessPoint235": {
+      "Type": "AWS::S3::AccessPoint",
+      "Properties": {}
+    },
+    "S3AccountPublicAccessBlock236": {
+      "Type": "AWS::S3::AccountPublicAccessBlock",
+      "Properties": {}
+    },
+    "S3BucketPolicy237": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {}
+    },
+    "SecretsManagerSecretPolicy238": {
+      "Type": "AWS::SecretsManager::SecretPolicy",
+      "Properties": {}
+    },
+    "SecretsManagerRotationSchedule239": {
+      "Type": "AWS::SecretsManager::RotationSchedule",
+      "Properties": {}
+    },
+    "SecretsManagerSecretTargetAttachment240": {
+      "Type": "AWS::SecretsManager::SecretTargetAttachment",
+      "Properties": {}
+    },
+    "EC2SecurityGroupIngress241": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {}
+    },
+    "EC2SecurityGroupEgress242": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {}
+    },
+    "ServiceDiscoveryService243": {
+      "Type": "AWS::ServiceDiscovery::Service",
+      "Properties": {}
+    },
+    "SESDomainDKIM244": {
+      "Type": "AWS::SES::DomainDKIM",
+      "Properties": {}
+    },
+    "SESDomainIdentity245": {
+      "Type": "AWS::SES::DomainIdentity",
+      "Properties": {}
+    },
+    "SNSPlatformApplication246": {
+      "Type": "AWS::SNS::PlatformApplication",
+      "Properties": {}
+    },
+    "SNSTopicPolicy247": {
+      "Type": "AWS::SNS::TopicPolicy",
+      "Properties": {}
+    },
+    "SQSQueuePolicy248": {
+      "Type": "AWS::SQS::QueuePolicy",
+      "Properties": {}
+    },
+    "SSMAssociation249": {
+      "Type": "AWS::SSM::Association",
+      "Properties": {}
+    },
+    "SSMMaintenanceWindow250": {
+      "Type": "AWS::SSM::MaintenanceWindow",
+      "Properties": {}
+    },
+    "SSMMaintenanceWindowTarget251": {
+      "Type": "AWS::SSM::MaintenanceWindowTarget",
+      "Properties": {}
+    },
+    "SSMMaintenanceWindowTask252": {
+      "Type": "AWS::SSM::MaintenanceWindowTask",
+      "Properties": {}
+    },
+    "SSMPatchBaseline253": {
+      "Type": "AWS::SSM::PatchBaseline",
+      "Properties": {}
+    },
+    "SSMPatchGroup254": {
+      "Type": "AWS::SSM::PatchGroup",
+      "Properties": {}
+    },
+    "SSMResourceDataSync255": {
+      "Type": "AWS::SSM::ResourceDataSync",
+      "Properties": {}
+    },
+    "TransferAccess256": {
+      "Type": "AWS::Transfer::Access",
+      "Properties": {}
+    },
+    "TransferSshKey257": {
+      "Type": "AWS::Transfer::SshKey",
+      "Properties": {}
+    },
+    "TransferUser258": {
+      "Type": "AWS::Transfer::User",
+      "Properties": {}
+    },
+    "EC2VolumeAttachment259": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {}
+    },
+    "EC2VPCDHCPOptionsAssociation260": {
+      "Type": "AWS::EC2::VPCDHCPOptionsAssociation",
+      "Properties": {}
+    },
+    "EC2VPCEndpointConnectionNotification261": {
+      "Type": "AWS::EC2::VPCEndpointConnectionNotification",
+      "Properties": {}
+    },
+    "EC2VPCEndpointRouteTableAssociation262": {
+      "Type": "AWS::EC2::VPCEndpointRouteTableAssociation",
+      "Properties": {}
+    },
+    "EC2VPCEndpointServiceAllowedPrincipal263": {
+      "Type": "AWS::EC2::VPCEndpointServiceAllowedPrincipal",
+      "Properties": {}
+    },
+    "EC2VPCEndpointService264": {
+      "Type": "AWS::EC2::VPCEndpointService",
+      "Properties": {}
+    },
+    "EC2VPCEndpointSubnetAssociation265": {
+      "Type": "AWS::EC2::VPCEndpointSubnetAssociation",
+      "Properties": {}
+    },
+    "EC2VPCCidrBlock266": {
+      "Type": "AWS::EC2::VPCCidrBlock",
+      "Properties": {}
+    },
+    "EC2VPCPeeringConnectionAccepter267": {
+      "Type": "AWS::EC2::VPCPeeringConnectionAccepter",
+      "Properties": {}
+    },
+    "EC2VPCPeeringConnectionOptions268": {
+      "Type": "AWS::EC2::VPCPeeringConnectionOptions",
+      "Properties": {}
+    },
+    "EC2VPCPeeringConnection269": {
+      "Type": "AWS::EC2::VPCPeeringConnection",
+      "Properties": {}
+    },
+    "EC2VPNConnectionRoute270": {
+      "Type": "AWS::EC2::VPNConnectionRoute",
+      "Properties": {}
+    },
+    "EC2VPNGatewayAttachment271": {
+      "Type": "AWS::EC2::VPNGatewayAttachment",
+      "Properties": {}
+    },
+    "EC2VPNGatewayRoutePropagation272": {
+      "Type": "AWS::EC2::VPNGatewayRoutePropagation",
+      "Properties": {}
+    },
+    "EC2VPNGateway273": {
+      "Type": "AWS::EC2::VPNGateway",
+      "Properties": {}
+    },
+    "WAFByteMatchSet274": {
+      "Type": "AWS::WAF::ByteMatchSet",
+      "Properties": {}
+    },
+    "WAFGeoMatchSet275": {
+      "Type": "AWS::WAF::GeoMatchSet",
+      "Properties": {}
+    },
+    "WAFIPSet276": {
+      "Type": "AWS::WAF::IPSet",
+      "Properties": {}
+    },
+    "WAFRateBasedRule277": {
+      "Type": "AWS::WAF::RateBasedRule",
+      "Properties": {}
+    },
+    "WAFRegexMatchSet278": {
+      "Type": "AWS::WAF::RegexMatchSet",
+      "Properties": {}
+    },
+    "WAFRegexPatternSet279": {
+      "Type": "AWS::WAF::RegexPatternSet",
+      "Properties": {}
+    },
+    "WAFRuleGroup280": {
+      "Type": "AWS::WAF::RuleGroup",
+      "Properties": {}
+    },
+    "WAFRule281": {
+      "Type": "AWS::WAF::Rule",
+      "Properties": {}
+    },
+    "WAFSizeConstraintSet282": {
+      "Type": "AWS::WAF::SizeConstraintSet",
+      "Properties": {}
+    },
+    "WAFSqlInjectionMatchSet283": {
+      "Type": "AWS::WAF::SqlInjectionMatchSet",
+      "Properties": {}
+    },
+    "WAFXssMatchSet284": {
+      "Type": "AWS::WAF::XssMatchSet",
+      "Properties": {}
+    },
+    "WAFv2IPSet285": {
+      "Type": "AWS::WAFv2::IPSet",
+      "Properties": {}
+    },
+    "WAFv2RegexPatternSet286": {
+      "Type": "AWS::WAFv2::RegexPatternSet",
+      "Properties": {}
+    },
+    "WAFv2RuleGroup287": {
+      "Type": "AWS::WAFv2::RuleGroup",
+      "Properties": {}
+    },
+    "WAFv2WebACLAssociation288": {
+      "Type": "AWS::WAFv2::WebACLAssociation",
+      "Properties": {}
+    },
+    "WAFv2LoggingConfiguration289": {
+      "Type": "AWS::WAFv2::LoggingConfiguration",
+      "Properties": {}
+    },
+    "CDKMetadata290": {
+      "Type": "AWS::CDK::Metadata",
+      "Properties": {}
+    },
+    "Custom291": {
+      "Type": "Custom::*",
+      "Properties": {}
+    }
+  }
+}

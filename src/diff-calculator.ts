@@ -44,6 +44,7 @@ export class DiffCalculator {
           beforeCost: 0,
           afterCost: afterResource.monthlyCost,
           costDifference: afterResource.monthlyCost,
+          afterDetails: afterResource.details,
         });
       } else if (Math.abs(beforeResource.monthlyCost - afterResource.monthlyCost) > 0.01) {
         // Modified resource with cost change
@@ -54,6 +55,8 @@ export class DiffCalculator {
           beforeCost: beforeResource.monthlyCost,
           afterCost: afterResource.monthlyCost,
           costDifference: afterResource.monthlyCost - beforeResource.monthlyCost,
+          beforeDetails: beforeResource.details,
+          afterDetails: afterResource.details,
         });
       } else {
         // Unchanged resource
@@ -64,6 +67,8 @@ export class DiffCalculator {
           beforeCost: beforeResource.monthlyCost,
           afterCost: afterResource.monthlyCost,
           costDifference: 0,
+          beforeDetails: beforeResource.details,
+          afterDetails: afterResource.details,
         });
       }
     }
@@ -78,6 +83,7 @@ export class DiffCalculator {
           beforeCost: beforeResource.monthlyCost,
           afterCost: 0,
           costDifference: -beforeResource.monthlyCost,
+          beforeDetails: beforeResource.details,
         });
       }
     }

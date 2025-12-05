@@ -1,0 +1,36 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Template containing paid resources (EC2, RDS, etc.)",
+  "Resources": {
+    "MyEC2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": "m5.large",
+        "ImageId": "ami-12345678"
+      }
+    },
+    "MyRDSInstance": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBInstanceClass": "db.m5.large",
+        "Engine": "mysql",
+        "AllocatedStorage": 20
+      }
+    },
+    "MyElastiCache": {
+      "Type": "AWS::ElastiCache::CacheCluster",
+      "Properties": {
+        "CacheNodeType": "cache.m5.large",
+        "Engine": "redis",
+        "NumCacheNodes": 1
+      }
+    },
+    "MyNatGateway": {
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "AllocationId": "eip-12345",
+        "SubnetId": "subnet-12345"
+      }
+    }
+  }
+}

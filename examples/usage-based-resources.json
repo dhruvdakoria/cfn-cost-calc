@@ -1,0 +1,94 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Template containing all usage-based resources",
+  "Resources": {
+    "LambdaFunction1": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {}
+    },
+    "DynamoDBTable2": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {}
+    },
+    "S3Bucket3": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {}
+    },
+    "SNSTopic4": {
+      "Type": "AWS::SNS::Topic",
+      "Properties": {}
+    },
+    "SQSQueue5": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {}
+    },
+    "ApiGatewayRestApi6": {
+      "Type": "AWS::ApiGateway::RestApi",
+      "Properties": {}
+    },
+    "ApiGatewayV2Api7": {
+      "Type": "AWS::ApiGatewayV2::Api",
+      "Properties": {}
+    },
+    "StepFunctionsStateMachine8": {
+      "Type": "AWS::StepFunctions::StateMachine",
+      "Properties": {}
+    },
+    "KinesisStream9": {
+      "Type": "AWS::Kinesis::Stream",
+      "Properties": {}
+    },
+    "FirehoseDeliveryStream10": {
+      "Type": "AWS::Firehose::DeliveryStream",
+      "Properties": {}
+    },
+    "CloudFrontDistribution11": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Properties": {}
+    },
+    "LogsLogGroup12": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {}
+    },
+    "GlueJob13": {
+      "Type": "AWS::Glue::Job",
+      "Properties": {}
+    },
+    "GlueCrawler14": {
+      "Type": "AWS::Glue::Crawler",
+      "Properties": {}
+    },
+    "AthenaWorkGroup15": {
+      "Type": "AWS::Athena::WorkGroup",
+      "Properties": {}
+    },
+    "CodeBuildProject16": {
+      "Type": "AWS::CodeBuild::Project",
+      "Properties": {}
+    },
+    "ECRRepository17": {
+      "Type": "AWS::ECR::Repository",
+      "Properties": {}
+    },
+    "EFSFileSystem18": {
+      "Type": "AWS::EFS::FileSystem",
+      "Properties": {}
+    },
+    "WAFv2WebACL19": {
+      "Type": "AWS::WAFv2::WebACL",
+      "Properties": {}
+    },
+    "WAFWebACL20": {
+      "Type": "AWS::WAF::WebACL",
+      "Properties": {}
+    },
+    "SSMParameter21": {
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {}
+    },
+    "Route53RecordSet22": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {}
+    }
+  }
+}

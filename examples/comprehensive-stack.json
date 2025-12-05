@@ -1,0 +1,132 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Comprehensive stack with free, paid, and usage-based resources",
+  "Resources": {
+    "MyFreeIamRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": { "Service": "lambda.amazonaws.com" },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        }
+      }
+    },
+    "MyPaidS3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": "my-comprehensive-test-bucket"
+      }
+    },
+    "MyUsageDynamoDBTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "my-ondemand-table-comp",
+        "BillingMode": "PAY_PER_REQUEST",
+        "AttributeDefinitions": [
+          { "AttributeName": "pk", "AttributeType": "S" }
+        ],
+        "KeySchema": [
+          { "AttributeName": "pk", "KeyType": "HASH" }
+        ]
+      }
+    },
+    "MyUsageLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "my-comp-test-function",
+        "Handler": "index.handler",
+        "Role": { "Fn::GetAtt": ["MyFreeIamRole", "Arn"] },
+        "Runtime": "nodejs18.x",
+        "Architectures": ["arm64"],
+        "MemorySize": 1024,
+        "Timeout": 60
+      }
+    },
+    "MyUsageApiGateway": {
+      "Type": "AWS::ApiGateway::RestApi",
+      "Properties": {
+        "Name": "MyCompApi"
+      }
+    },
+    "MyPaidALB": {
+      "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+      "Properties": {
+        "Type": "application",
+        "Scheme": "internet-facing",
+        "Subnets": ["subnet-1", "subnet-2"]
+      }
+    },
+    "MyPaidNLB": {
+      "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+      "Properties": {
+        "Type": "network",
+        "Scheme": "internal",
+        "Subnets": ["subnet-1"]
+      }
+    },
+    "MyFreeSSMParameter": {
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Name": "my-standard-param",
+        "Type": "String",
+        "Value": "test",
+        "Tier": "Standard"
+      }
+    },
+    "MyPaidSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Name": "my-paid-secret",
+        "Description": "This secret costs money"
+      }
+    },
+    "MyPaidKMSKey": {
+      "Type": "AWS::KMS::Key",
+      "Properties": {
+        "Description": "My paid KMS key",
+        "KeyPolicy": {
+          "Version": "2012-10-17",
+          "Statement": []
+        }
+      }
+    },
+    "MyPaidRDSInstance": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBInstanceClass": "db.t3.medium",
+        "Engine": "postgres",
+        "AllocatedStorage": 50,
+        "StorageType": "gp3",
+        "MultiAZ": true
+      }
+    },
+    "MyFreeVPCEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcEndpointType": "Gateway",
+        "ServiceName": { "Fn::Sub": "com.amazonaws.${AWS::Region}.s3" },
+        "VpcId": "vpc-12345"
+      }
+    },
+    "MyPaidCloudWatchAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": "MyCompAlarm",
+        "MetricName": "Errors",
+        "Namespace": "AWS/Lambda",
+        "ComparisonOperator": "GreaterThanThreshold",
+        "EvaluationPeriods": 1,
+        "Period": 300,
+        "Statistic": "Sum",
+        "Threshold": 0
+      }
+    }
+  }
+}
+

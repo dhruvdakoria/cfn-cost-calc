@@ -464,10 +464,11 @@ async function fetchElastiCache(region: string): Promise<Record<string, number>>
 }
 
 // Fetch Lambda pricing
-async function fetchLambda(region: string): Promise<{ requests: number; duration: number }> {
+async function fetchLambda(region: string): Promise<{ requests: number; duration: number; durationArm?: number }> {
   console.log('  Fetching Lambda...');
-  let requests = 0.20;
-  let duration = 0.0000166667;
+  let requests = 0;
+  let duration = 0;
+  let durationArm: number | undefined;
   
   const query = `{
     products(filter: {
@@ -486,12 +487,24 @@ async function fetchLambda(region: string): Promise<{ requests: number; duration
       const attrs = attributesToObject(product.attributes);
       const group = attrs.group || '';
       const usagetype = attrs.usagetype || '';
+      const description = (product as any).description || ''; // Note: product interface above doesn't have description but API might return it if requested, though query doesn't ask for it. attributes might contain it.
+      // attributes often has 'groupDescription' or similar. 
+      
       const price = product.prices?.[0];
       if (price?.USD) {
         if (group.includes('Request') || usagetype.includes('Request')) {
           requests = parseFloat(price.USD) * 1000000;
         } else if (group.includes('Duration') || usagetype.includes('Lambda-GB-Second')) {
-          duration = parseFloat(price.USD);
+          // Check for ARM
+          const isArm = usagetype.includes('ARM') || 
+                        group.includes('ARM') || 
+                        (attrs['groupDescription'] && attrs['groupDescription'].includes('ARM'));
+                        
+          if (isArm) {
+            durationArm = parseFloat(price.USD);
+          } else {
+            duration = parseFloat(price.USD);
+          }
         }
       }
     }
@@ -500,14 +513,14 @@ async function fetchLambda(region: string): Promise<{ requests: number; duration
   }
   
   console.log(`    ✓ Lambda pricing`);
-  return { requests, duration };
+  return { requests, duration, durationArm };
 }
 
 // Fetch NAT Gateway pricing
 async function fetchNATGateway(region: string): Promise<{ hourly: number; perGB: number }> {
   console.log('  Fetching NAT Gateway...');
-  let hourly = 0.045;
-  let perGB = 0.045;
+  let hourly = 0;
+  let perGB = 0;
   
   const query = `{
     products(filter: {
@@ -547,9 +560,9 @@ async function fetchLoadBalancers(region: string): Promise<{
 }> {
   console.log('  Fetching Load Balancers...');
   const result = {
-    alb: { hourly: 0.0225, lcuHourly: 0.008 },
-    nlb: { hourly: 0.0225, lcuHourly: 0.006 },
-    clb: { hourly: 0.025 },
+    alb: { hourly: 0, lcuHourly: 0 },
+    nlb: { hourly: 0, lcuHourly: 0 },
+    clb: { hourly: 0 },
   };
   
   // ALB
@@ -637,7 +650,7 @@ async function fetchLoadBalancers(region: string): Promise<{
 // Fetch EKS pricing
 async function fetchEKS(region: string): Promise<{ clusterHourly: number }> {
   console.log('  Fetching EKS...');
-  let clusterHourly = 0.10;
+  let clusterHourly = 0;
   
   const query = `{
     products(filter: {
@@ -666,8 +679,8 @@ async function fetchEKS(region: string): Promise<{ clusterHourly: number }> {
 // Fetch Fargate pricing
 async function fetchFargate(region: string): Promise<{ vcpuHourly: number; memoryGBHourly: number }> {
   console.log('  Fetching Fargate...');
-  let vcpuHourly = 0.04048;
-  let memoryGBHourly = 0.004445;
+  let vcpuHourly = 0;
+  let memoryGBHourly = 0;
   
   const query = `{
     products(filter: {
@@ -709,84 +722,84 @@ async function fetchOtherServices(region: string): Promise<Record<string, unknow
   
   const other: Record<string, unknown> = {
     dynamodb: {
-      readCapacity: 0.00013,
-      writeCapacity: 0.00065,
-      onDemandRead: 0.25,
-      onDemandWrite: 1.25,
-      storage: 0.25,
+      readCapacity: 0,
+      writeCapacity: 0,
+      onDemandRead: 0,
+      onDemandWrite: 0,
+      storage: 0,
     },
     s3: {
-      standardStorage: 0.023,
-      standardIAStorage: 0.0125,
-      glacierStorage: 0.004,
+      standardStorage: 0,
+      standardIAStorage: 0,
+      glacierStorage: 0,
     },
     apiGateway: {
-      rest: 3.50,
-      http: 1.00,
-      websocket: 1.00,
+      rest: 0,
+      http: 0,
+      websocket: 0,
     },
     sqs: {
-      standard: 0.40,
-      fifo: 0.50,
+      standard: 0,
+      fifo: 0,
     },
     sns: {
-      publish: 0.50,
+      publish: 0,
     },
     cloudwatch: {
-      metrics: 0.30,
-      alarmStandard: 0.10,
-      alarmHighRes: 0.30,
-      dashboards: 3.00,
-      logsIngestion: 0.50,
-      logsStorage: 0.03,
+      metrics: 0,
+      alarmStandard: 0,
+      alarmHighRes: 0,
+      dashboards: 0,
+      logsIngestion: 0,
+      logsStorage: 0,
     },
     secretsManager: {
-      secret: 0.40,
-      apiCalls: 0.05,
+      secret: 0,
+      apiCalls: 0,
     },
     kms: {
-      key: 1.00,
-      requests: 0.03,
+      key: 0,
+      requests: 0,
     },
     stepFunctions: {
-      standard: 25.00,
-      express: 1.00,
+      standard: 0,
+      express: 0,
     },
     route53: {
-      hostedZone: 0.50,
-      queries: 0.40,
+      hostedZone: 0,
+      queries: 0,
     },
     vpcEndpoint: {
-      hourly: 0.01,
-      dataProcessed: 0.01,
+      hourly: 0,
+      dataProcessed: 0,
     },
     cognito: {
-      mau: 0.0055,
+      mau: 0,
     },
     eventBridge: {
-      customEvents: 1.00,
+      customEvents: 0,
     },
     kinesis: {
-      shardHourly: 0.015,
-      payloadUnit: 0.014,
+      shardHourly: 0,
+      payloadUnit: 0,
     },
     efs: {
-      standard: 0.30,
-      ia: 0.016,
+      standard: 0,
+      ia: 0,
     },
     ecr: {
-      storage: 0.10,
+      storage: 0,
     },
     waf: {
-      webACL: 5.00,
-      rule: 1.00,
-      requests: 0.60,
+      webACL: 0,
+      rule: 0,
+      requests: 0,
     },
     glue: {
-      dpuHour: 0.44,
+      dpuHour: 0,
     },
     athena: {
-      dataScanned: 5.00,
+      dataScanned: 0,
     },
   };
   
@@ -946,7 +959,7 @@ async function fetchOpenSearch(region: string): Promise<Record<string, number>> 
 async function fetchDocumentDB(region: string): Promise<{ instances: Record<string, number>; storage: number }> {
   console.log('  Fetching DocumentDB...');
   const instances: Record<string, number> = {};
-  let storage = 0.10;
+  let storage = 0;
   
   const instanceTypes = [
     'db.t3.medium', 'db.t4g.medium',
@@ -1010,7 +1023,7 @@ async function fetchDocumentDB(region: string): Promise<{ instances: Record<stri
 async function fetchNeptune(region: string): Promise<{ instances: Record<string, number>; storage: number }> {
   console.log('  Fetching Neptune...');
   const instances: Record<string, number> = {};
-  let storage = 0.10;
+  let storage = 0;
   
   const instanceTypes = [
     'db.t3.medium', 'db.t4g.medium',
@@ -1093,8 +1106,8 @@ async function fetchRedshift(region: string): Promise<{ instances: Record<string
 // Fetch Kinesis pricing
 async function fetchKinesis(region: string): Promise<{ shardHourly: number; payloadUnit: number }> {
   console.log('  Fetching Kinesis...');
-  let shardHourly = 0.015;
-  let payloadUnit = 0.014;
+  let shardHourly = 0;
+  let payloadUnit = 0;
   
   const shardQuery = `{
     products(filter: {
@@ -1126,7 +1139,7 @@ async function fetchKinesis(region: string): Promise<{ shardHourly: number; payl
 async function fetchMSK(region: string): Promise<{ instanceHourly: Record<string, number>; storage: number }> {
   console.log('  Fetching MSK...');
   const instanceHourly: Record<string, number> = {};
-  const storage = 0.10;
+  const storage = 0;
   
   const instanceTypes = [
     'kafka.t3.small',
@@ -1167,7 +1180,7 @@ async function fetchMSK(region: string): Promise<{ instanceHourly: Record<string
 async function fetchMQ(region: string): Promise<{ instanceHourly: Record<string, number>; storage: number }> {
   console.log('  Fetching Amazon MQ...');
   const instanceHourly: Record<string, number> = {};
-  const storage = 0.10;
+  const storage = 0;
   
   const instanceTypes = [
     'mq.t2.micro', 'mq.t3.micro',
@@ -1213,11 +1226,11 @@ async function fetchCloudWatch(region: string): Promise<{
   logsStorage: number;
 }> {
   console.log('  Fetching CloudWatch...');
-  let alarmStandard = 0.10;
-  let alarmHighRes = 0.30;
-  let dashboards = 3.00;
-  let logsIngestion = 0.50;
-  let logsStorage = 0.03;
+  let alarmStandard = 0;
+  let alarmHighRes = 0;
+  let dashboards = 0;
+  let logsIngestion = 0;
+  let logsStorage = 0;
   
   // Alarm pricing
   const alarmQuery = `{
@@ -1256,9 +1269,9 @@ async function fetchCloudWatch(region: string): Promise<{
 // Fetch WAF pricing
 async function fetchWAF(region: string): Promise<{ webACL: number; rule: number; requests: number }> {
   console.log('  Fetching WAF...');
-  let webACL = 5.00;
-  let rule = 1.00;
-  let requests = 0.60;
+  let webACL = 0;
+  let rule = 0;
+  let requests = 0;
   
   const query = `{
     products(filter: {
@@ -1299,7 +1312,7 @@ async function fetchWAF(region: string): Promise<{ webACL: number; rule: number;
 // Fetch Glue pricing
 async function fetchGlue(region: string): Promise<{ dpuHour: number }> {
   console.log('  Fetching Glue...');
-  let dpuHour = 0.44;
+  let dpuHour = 0;
   
   const query = `{
     products(filter: {
@@ -1373,27 +1386,7 @@ async function fetchDMS(region: string): Promise<{ instances: Record<string, num
 interface AWSpricingData {
   region: string;
   lastUpdated: string;
-  ec2: { instances: Record<string, number> };
-  ebs: { volumes: Record<string, number>; iops: Record<string, number>; throughput: Record<string, number>; snapshots: number };
-  rds: { instances: Record<string, Record<string, number>>; storage: Record<string, number>; iops: number };
-  elasticache: { nodes: Record<string, number> };
-  lambda: { requests: number; duration: number };
-  natGateway: { hourly: number; perGB: number };
-  loadBalancer: { alb: { hourly: number; lcuHourly: number }; nlb: { hourly: number; lcuHourly: number }; clb: { hourly: number } };
-  eks: { clusterHourly: number };
-  fargate: { vcpuHourly: number; memoryGBHourly: number };
-  opensearch: { instances: Record<string, number> };
-  documentdb: { instances: Record<string, number>; storage: number };
-  neptune: { instances: Record<string, number>; storage: number };
-  redshift: { instances: Record<string, number> };
-  kinesis: { shardHourly: number; payloadUnit: number };
-  msk: { instanceHourly: Record<string, number>; storage: number };
-  mq: { instanceHourly: Record<string, number>; storage: number };
-  cloudwatch: { alarmStandard: number; alarmHighRes: number; dashboards: number; logsIngestion: number; logsStorage: number };
-  waf: { webACL: number; rule: number; requests: number };
-  glue: { dpuHour: number };
-  dms: { instances: Record<string, number> };
-  other: Record<string, unknown>;
+  [key: string]: any; // Allow any structure for generation script flexibility
 }
 
 async function fetchAllPricingForRegion(region: string): Promise<AWSpricingData> {
@@ -1414,39 +1407,123 @@ async function fetchAllPricingForRegion(region: string): Promise<AWSpricingData>
   const documentdb = await fetchDocumentDB(region);
   const neptune = await fetchNeptune(region);
   const redshift = await fetchRedshift(region);
-  const kinesis = await fetchKinesis(region);
+  const fetchedKinesis = await fetchKinesis(region);
   const msk = await fetchMSK(region);
   const mq = await fetchMQ(region);
-  const cloudwatch = await fetchCloudWatch(region);
-  const waf = await fetchWAF(region);
-  const glue = await fetchGlue(region);
+  const fetchedCloudwatch = await fetchCloudWatch(region);
+  const fetchedWaf = await fetchWAF(region);
+  const fetchedGlue = await fetchGlue(region);
   const dms = await fetchDMS(region);
   const other = await fetchOtherServices(region);
   
+  // Flatten other services to top-level
+  const dynamodb = other.dynamodb as any;
+  const s3 = other.s3 as any;
+  const apiGateway = other.apiGateway as any;
+  const sqs = other.sqs as any;
+  const sns = other.sns as any;
+  const cloudwatch = other.cloudwatch as any;
+  const secretsManager = other.secretsManager as any;
+  const kms = other.kms as any;
+  const stepFunctions = other.stepFunctions as any;
+  const route53 = other.route53 as any;
+  const vpcEndpoint = other.vpcEndpoint as any;
+  const eventbridge = other.eventBridge as any;
+  const kinesis = other.kinesis as any;
+  const efs = other.efs as any;
+  const ecr = other.ecr as any;
+  const waf = other.waf as any;
+  const glue = other.glue as any;
+  const athena = other.athena as any;
+  
+  // Extract Aurora from RDS
+  const auroraInstances: Record<string, number> = {};
+  if (rds.instances['aurora-mysql']) {
+    Object.assign(auroraInstances, rds.instances['aurora-mysql']);
+    delete rds.instances['aurora-mysql'];
+  }
+  if (rds.instances['aurora-postgresql']) {
+    Object.assign(auroraInstances, rds.instances['aurora-postgresql']);
+    delete rds.instances['aurora-postgresql'];
+  }
+  
+  const aurora = {
+    instances: auroraInstances,
+    storage: 0.10, // Default
+    ioRequests: 0.20,
+    backtrackChanges: 0.012
+  };
+
+  // Filter out promoted services from other
+  const otherRemaining: Record<string, unknown> = { ...other };
+  ['dynamodb', 's3', 'apiGateway', 'sqs', 'sns', 'cloudwatch', 'secretsManager', 'kms', 'stepFunctions', 'route53', 'vpcEndpoint', 'eventBridge', 'kinesis', 'efs', 'ecr', 'waf', 'glue', 'athena'].forEach(k => delete otherRemaining[k]);
+
   return {
     region,
     lastUpdated: new Date().toISOString(),
-    ec2: { instances: ec2 },
+    ec2: { instances: ec2, hosts: {} },
     ebs: { ...ebs, snapshots: 0.05 },
     rds,
+    aurora,
     elasticache: { nodes: elasticache },
-    lambda,
+    dynamodb,
+    neptune,
+    documentdb,
+    redshift,
     natGateway,
     loadBalancer,
+    vpcEndpoint,
+    vpnConnection: { hourly: 0.05, transitGatewayAttachment: 0.05, clientVpn: { endpointHourly: 0.05, connectionHourly: 0.05 } },
+    transitGateway: { hourly: 0.05, dataProcessed: 0.02, peering: 0.05 },
+    trafficMirror: { sessionHourly: 0.15 },
+    directConnect: { portHours: {}, dataTransfer: 0.02 },
+    globalAccelerator: { hourly: 0.025, dataTransfer: 0.015 },
     eks,
-    fargate,
-    opensearch: { instances: opensearch },
-    documentdb,
-    neptune,
-    redshift,
-    kinesis,
-    msk,
+    ecs: { fargateVcpuHourly: fargate.vcpuHourly, fargateMemoryGBHourly: fargate.memoryGBHourly },
+    ecr,
+    lambda,
+    apiGateway,
+    stepFunctions,
+    s3: { ...s3, requests: { put: 0.005, get: 0.0004, lifecycle: 0.01 } }, // Add requests default
+    efs: { ...efs, provisionedThroughput: 6.00 },
+    fsx: { lustre: 0.14, windows: 0.23, ontap: 0.25, openzfs: 0.09 },
+    backup: { storage: 0.05, restoreStorage: 0.02 },
+    opensearch: { instances: opensearch, storage: 0.135, ultrawarmStorage: 0.024 },
+    elasticsearch: { instances: {} },
+    kinesis: { ...kinesis, extendedRetention: 0.02, enhancedFanout: 0.015 },
+    kinesisFirehose: { dataIngested: 0.029, formatConversion: 0.018 },
+    glue: { ...glue, crawlerDpuHour: 0.44, catalogStorage: 1.00, catalogRequests: 1.00 },
+    athena,
+    sqs,
+    sns: { ...sns, deliveries: { http: 0.60, email: 2.00, sms: 0.75, lambda: 0.00, sqs: 0.00 } },
+    eventbridge: { ...eventbridge, partnerEvents: 1.00, archiveProcessed: 0.10, schemaDiscovery: 0.10 },
     mq,
-    cloudwatch,
+    msk,
+    directoryService: { simpleAD: { small: 0.05, large: 0.15 }, microsoftAD: { standard: 0.12, enterprise: 0.40 } },
+    mwaa: { environment: { 'mw1.small': 0.49, 'mw1.medium': 0.99, 'mw1.large': 1.99 } },
+    kinesisAnalytics: { kpuHourly: 0.11, storage: 0.10 },
+    ssm: { parameter: { standard: 0, advanced: 0.05, apiCalls: 0.05 }, activation: { standard: 0, advanced: 0.00695 } },
+    secretsManager,
+    kms,
+    acm: { privateCertificate: 0.75 },
     waf,
-    glue,
+    guardDuty: { events: 4.00, s3Events: 0.80, eksEvents: 1.60 },
+    macie: { bucketEvaluated: 0.10, dataScanned: 1.00 },
+    cloudwatch: { ...cloudwatch, alarmAnomaly: 0.30, alarmComposite: 0.50, logsInsightsQueries: 0.005, contributorInsightsRules: 0.50, contributorInsightsEvents: 0.02 },
+    cloudtrail: { managementEvents: 2.00, dataEvents: 0.10, insightsEvents: 0.35 },
+    config: { configItems: 0.003, rules: 1.00, conformancePackRules: 0.001 },
+    codebuild: { linuxSmall: 0.005, linuxMedium: 0.01, linuxLarge: 0.02, linux2xlarge: 0.04, armLarge: 0.015, gpuLarge: 0.18, windowsMedium: 0.02, windowsLarge: 0.04 },
+    codepipeline: { activePipeline: 1.00, trialPipelines: 0 },
+    cloudfront: { dataTransfer: {}, requests: { http: 0.0075, https: 0.01 }, invalidations: 0.005, ssl: 600.00, originShield: 0.0090, realtimeLogs: 0.01, functions: 0.10 },
+    route53: { ...route53, healthChecks: { basic: 0.50, https: 0.75, string: 1.00, fast: 1.00 }, resolverEndpoint: 0.125, resolverQueries: 0.40 },
+    sagemaker: { notebookInstances: {}, trainingInstances: {}, endpointInstances: {} },
+    transferFamily: { protocols: 0.30, dataProcessed: 0.04 },
     dms,
-    other,
+    iot: { connectivityMinutes: 0.08, messages: 1.00, ruleEngineActions: 0.15 },
+    lightsail: { instances: {} },
+    beanstalk: {},
+    fargate,
+    other: otherRemaining,
   };
 }
 
@@ -1478,9 +1555,12 @@ async function main() {
     console.log(`\n${region}:`);
     console.log(`  EC2 Instance Types:     ${Object.keys(pricing.ec2.instances).length}`);
     console.log(`  EBS Volume Types:       ${Object.keys(pricing.ebs.volumes).length}`);
-    console.log(`  RDS Engines:            ${Object.keys(pricing.rds.instances).length}`);
-    const totalRds = Object.values(pricing.rds.instances).reduce((s, e) => s + Object.keys(e).length, 0);
+    
+    const rdsInstances = pricing.rds.instances as Record<string, Record<string, number>>;
+    console.log(`  RDS Engines:            ${Object.keys(rdsInstances).length}`);
+    const totalRds = Object.values(rdsInstances).reduce((s: number, e: Record<string, number>) => s + Object.keys(e).length, 0);
     console.log(`  RDS Instance Types:     ${totalRds}`);
+    
     console.log(`  ElastiCache Nodes:      ${Object.keys(pricing.elasticache.nodes).length}`);
     console.log(`  OpenSearch Instances:   ${Object.keys(pricing.opensearch.instances).length}`);
     console.log(`  DocumentDB Instances:   ${Object.keys(pricing.documentdb.instances).length}`);

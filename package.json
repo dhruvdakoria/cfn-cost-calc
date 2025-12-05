@@ -7,7 +7,7 @@
     "cfn-cost": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && mkdir -p dist/data && cp data/aws-pricing.json dist/data/",
     "start": "node dist/cli.js",
     "dev": "ts-node src/cli.ts",
     "lint": "eslint src/**/*.ts",

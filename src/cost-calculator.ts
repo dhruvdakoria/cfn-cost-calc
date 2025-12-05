@@ -41,8 +41,23 @@ export class CostCalculator {
     for (const [logicalId, resource] of templateResources) {
       const resourceType = resource.Type;
       
-      // Skip free resources
+      // Handle free resources
       if (this.isFreeResource(resourceType)) {
+        resources.push({
+          resourceId: logicalId,
+          resourceType,
+          monthlyCost: 0,
+          hourlyCost: 0,
+          unit: 'resource',
+          details: [{
+            component: 'Free Resource',
+            quantity: 1,
+            unitPrice: 0,
+            monthlyCost: 0,
+            unit: 'resource'
+          }],
+          confidence: 'high',
+        });
         continue;
       }
       
@@ -2170,8 +2185,16 @@ export class CostCalculator {
     const estimatedInvocations = 100000;
     const avgDurationMs = timeout * 500; // Half of timeout in ms
     
+    const architectures = (resource.Properties?.Architectures as string[]) || ['x86_64'];
+    const isArm = architectures.includes('arm64');
+
     const requestPrice = this.pricing.lambda.requests || 0.20;
-    const durationPrice = this.pricing.lambda.duration || 0.0000166667;
+    let durationPrice = this.pricing.lambda.duration || 0.0000166667;
+    
+    if (isArm && this.pricing.lambda.durationArm) {
+      durationPrice = this.pricing.lambda.durationArm;
+    }
+
     const freeDuration = 400000; // GB-seconds free tier
     
     const gbSeconds = (memorySize / 1024) * (avgDurationMs / 1000) * estimatedInvocations;

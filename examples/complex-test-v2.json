@@ -1,0 +1,81 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Complex stack with free, paid, and usage-based resources for cost estimation testing (V2)",
+  "Resources": {
+    "MyIamRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": { "Service": "ec2.amazonaws.com" },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        }
+      }
+    },
+    "MyEC2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": "t3.large",
+        "ImageId": "ami-12345678"
+      }
+    },
+    "MyNatGateway": {
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "AllocationId": "eip-12345",
+        "SubnetId": "subnet-12345"
+      }
+    },
+    "MyS3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": "my-cost-test-bucket"
+      }
+    },
+    "MyDynamoDBTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "my-ondemand-table",
+        "BillingMode": "PROVISIONED",
+        "ProvisionedThroughput": {
+            "ReadCapacityUnits": 10,
+            "WriteCapacityUnits": 10
+        },
+        "AttributeDefinitions": [
+          { "AttributeName": "id", "AttributeType": "S" }
+        ],
+        "KeySchema": [
+          { "AttributeName": "id", "KeyType": "HASH" }
+        ]
+      }
+    },
+    "MyLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "my-cost-test-function",
+        "Handler": "index.handler",
+        "Role": { "Fn::GetAtt": ["MyIamRole", "Arn"] },
+        "Runtime": "nodejs14.x",
+        "MemorySize": 512,
+        "Timeout": 30
+      }
+    },
+    "MyNewLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "my-new-function",
+        "Handler": "index.handler",
+        "Role": { "Fn::GetAtt": ["MyIamRole", "Arn"] },
+        "Runtime": "nodejs18.x",
+        "MemorySize": 1024,
+        "Timeout": 10
+      }
+    }
+  }
+}
+
