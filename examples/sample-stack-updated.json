@@ -1,0 +1,139 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Updated sample CloudFormation stack - more resources, larger instances",
+  "Resources": {
+    "WebServer": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": "t3.large",
+        "ImageId": "ami-12345678"
+      }
+    },
+    "WebServerVolume": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "AvailabilityZone": "us-east-1a",
+        "Size": 200,
+        "VolumeType": "gp3"
+      }
+    },
+    "Database": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBInstanceClass": "db.m5.large",
+        "Engine": "postgres",
+        "AllocatedStorage": 100,
+        "MultiAZ": true
+      }
+    },
+    "CacheCluster": {
+      "Type": "AWS::ElastiCache::CacheCluster",
+      "Properties": {
+        "CacheNodeType": "cache.m5.large",
+        "Engine": "redis",
+        "NumCacheNodes": 3
+      }
+    },
+    "LoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+      "Properties": {
+        "Type": "application",
+        "Scheme": "internet-facing"
+      }
+    },
+    "NatGateway": {
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "AllocationId": "eipalloc-12345678",
+        "SubnetId": "subnet-12345678"
+      }
+    },
+    "NatGateway2": {
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "AllocationId": "eipalloc-87654321",
+        "SubnetId": "subnet-87654321"
+      }
+    },
+    "ApiFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "ApiHandler",
+        "Runtime": "nodejs18.x",
+        "Handler": "index.handler",
+        "MemorySize": 512,
+        "Timeout": 60,
+        "Code": {
+          "S3Bucket": "my-bucket",
+          "S3Key": "code.zip"
+        }
+      }
+    },
+    "DataTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "MyTable",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "id",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "id",
+            "KeyType": "HASH"
+          }
+        ],
+        "BillingMode": "PAY_PER_REQUEST"
+      }
+    },
+    "RestApi": {
+      "Type": "AWS::ApiGateway::RestApi",
+      "Properties": {
+        "Name": "MyApi"
+      }
+    },
+    "MySecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Name": "MyDatabaseSecret"
+      }
+    },
+    "MySecret2": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Name": "MyApiSecret"
+      }
+    },
+    "EncryptionKey": {
+      "Type": "AWS::KMS::Key",
+      "Properties": {
+        "Description": "My encryption key"
+      }
+    },
+    "EksCluster": {
+      "Type": "AWS::EKS::Cluster",
+      "Properties": {
+        "Name": "MyCluster"
+      }
+    },
+    "SecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Web server security group",
+        "VpcId": "vpc-12345678"
+      }
+    },
+    "WebServerRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": []
+        }
+      }
+    }
+  }
+}
+

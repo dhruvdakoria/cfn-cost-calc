@@ -1,0 +1,159 @@
+# GitHub Actions workflow for CDK Cost Estimation
+# Add this to your repository's .github/workflows/ directory
+# 
+# This workflow:
+# 1. Runs on pull requests that modify CDK/infrastructure code
+# 2. Synthesizes the CDK stacks
+# 3. Compares costs between deployed and new infrastructure
+# 4. Posts a comment to the PR with the cost breakdown
+
+name: CDK Cost Estimate
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - 'lib/**'
+      - 'bin/**'
+      - 'cdk.json'
+      - 'package.json'
+      - '**/*.ts'
+      - '**/*.py'  # If using CDK Python
+
+# Customize these permissions based on your needs
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write  # Required for OIDC auth with AWS
+
+env:
+  AWS_REGION: us-east-1  # Change to your default region
+  CDK_OUT_DIR: cdk.out
+
+jobs:
+  cost-estimate:
+    name: Estimate CDK Stack Costs
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install CDK CLI
+        run: npm install -g aws-cdk
+
+      - name: Install cfn-cost-estimate
+        run: |
+          # Option 1: Install from npm (when published)
+          # npm install -g cfn-cost-estimate
+          
+          # Option 2: Install from this repository
+          cd ${{ github.workspace }}
+          if [ -d "tools/cfn-cost-estimate" ]; then
+            cd tools/cfn-cost-estimate
+            npm ci
+            npm run build
+            npm link
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Option 1: Use OIDC (recommended)
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+          # Option 2: Use access keys (less secure)
+          # aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          # aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Synthesize CDK stacks
+        run: |
+          cdk synth --quiet
+        env:
+          # Add any environment variables your CDK app needs
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
+
+      - name: Generate cost estimate
+        id: cost
+        run: |
+          # Generate the cost comparison comment
+          cfn-cost github-comment \
+            --cdk-out ${{ env.CDK_OUT_DIR }} \
+            --region ${{ env.AWS_REGION }} \
+            --output cost-comment.md
+          
+          # Set output for the next step
+          echo "comment_file=cost-comment.md" >> $GITHUB_OUTPUT
+
+      - name: Post PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const comment = fs.readFileSync('cost-comment.md', 'utf8');
+            
+            // Find existing cost estimate comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(c => 
+              c.user.type === 'Bot' && 
+              c.body.includes('💰 CloudFormation Cost Estimate')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment,
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment,
+              });
+            }
+
+      - name: Upload cost report
+        uses: actions/upload-artifact@v4
+        with:
+          name: cost-estimate
+          path: cost-comment.md
+          retention-days: 30
+
+      - name: Check cost threshold
+        run: |
+          # Optional: Fail the workflow if costs exceed a threshold
+          # This requires parsing the JSON output
+          
+          # Example: Generate JSON output
+          cfn-cost compare \
+            --cdk-out ${{ env.CDK_OUT_DIR }} \
+            --region ${{ env.AWS_REGION }} \
+            --format json \
+            --output cost-data.json || true
+          
+          # You can add a script to parse and check thresholds
+          # node scripts/check-cost-threshold.js cost-data.json
+

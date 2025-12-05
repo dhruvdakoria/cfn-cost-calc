@@ -1,0 +1,192 @@
+# Reusable GitHub Actions workflow for CDK Cost Estimation
+# 
+# Call this workflow from your CDK repository:
+#
+# jobs:
+#   cost-estimate:
+#     uses: your-org/cfn-cost-estimate/.github/workflows/cost-estimate-reusable.yml@main
+#     with:
+#       cdk-out-dir: cdk.out
+#       aws-region: us-east-1
+#     secrets:
+#       aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
+
+name: CDK Cost Estimate (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      cdk-out-dir:
+        description: 'CDK output directory'
+        required: false
+        default: 'cdk.out'
+        type: string
+      aws-region:
+        description: 'AWS region'
+        required: false
+        default: 'us-east-1'
+        type: string
+      stack-names:
+        description: 'Comma-separated list of stack names (optional, defaults to all)'
+        required: false
+        type: string
+      cost-threshold:
+        description: 'Monthly cost increase threshold to warn (in dollars)'
+        required: false
+        default: '100'
+        type: string
+      fail-on-threshold:
+        description: 'Fail workflow if cost exceeds threshold'
+        required: false
+        default: 'false'
+        type: string
+    secrets:
+      aws-role-arn:
+        description: 'AWS IAM role ARN for OIDC authentication'
+        required: false
+      aws-access-key-id:
+        description: 'AWS access key ID (alternative to OIDC)'
+        required: false
+      aws-secret-access-key:
+        description: 'AWS secret access key (alternative to OIDC)'
+        required: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  estimate:
+    name: Estimate Stack Costs
+    runs-on: ubuntu-latest
+    
+    outputs:
+      cost-difference: ${{ steps.estimate.outputs.cost_difference }}
+      exceeds-threshold: ${{ steps.check.outputs.exceeds_threshold }}
+    
+    steps:
+      - name: Checkout cfn-cost-estimate
+        uses: actions/checkout@v4
+        with:
+          repository: your-org/cfn-cost-estimate  # Update with your repo
+          path: cfn-cost-estimate
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build cfn-cost-estimate
+        working-directory: cfn-cost-estimate
+        run: |
+          npm ci
+          npm run build
+          npm link
+
+      - name: Configure AWS credentials (OIDC)
+        if: ${{ secrets.aws-role-arn != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.aws-role-arn }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: Configure AWS credentials (Access Keys)
+        if: ${{ secrets.aws-role-arn == '' && secrets.aws-access-key-id != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: Generate cost estimate
+        id: estimate
+        run: |
+          STACK_ARGS=""
+          if [ -n "${{ inputs.stack-names }}" ]; then
+            STACK_ARGS="--stacks ${{ inputs.stack-names }}"
+          fi
+          
+          # Generate markdown comment
+          cfn-cost github-comment \
+            --cdk-out ${{ inputs.cdk-out-dir }} \
+            --region ${{ inputs.aws-region }} \
+            $STACK_ARGS \
+            --output cost-comment.md
+          
+          # Generate JSON for threshold check
+          cfn-cost compare \
+            --cdk-out ${{ inputs.cdk-out-dir }} \
+            --region ${{ inputs.aws-region }} \
+            $STACK_ARGS \
+            --format json \
+            --output cost-data.json
+          
+          # Extract total cost difference
+          COST_DIFF=$(cat cost-data.json | jq '[.[].costDifference] | add // 0')
+          echo "cost_difference=$COST_DIFF" >> $GITHUB_OUTPUT
+
+      - name: Check cost threshold
+        id: check
+        run: |
+          COST_DIFF="${{ steps.estimate.outputs.cost_difference }}"
+          THRESHOLD="${{ inputs.cost-threshold }}"
+          
+          # Use bc for floating point comparison
+          EXCEEDS=$(echo "$COST_DIFF > $THRESHOLD" | bc -l)
+          
+          if [ "$EXCEEDS" = "1" ]; then
+            echo "exceeds_threshold=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Cost increase ($COST_DIFF) exceeds threshold ($THRESHOLD)"
+            
+            if [ "${{ inputs.fail-on-threshold }}" = "true" ]; then
+              echo "::error::Monthly cost increase exceeds threshold"
+              exit 1
+            fi
+          else
+            echo "exceeds_threshold=false" >> $GITHUB_OUTPUT
+            echo "✅ Cost increase ($COST_DIFF) within threshold ($THRESHOLD)"
+          fi
+
+      - name: Post PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const comment = fs.readFileSync('cost-comment.md', 'utf8');
+            
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(c => 
+              c.user.type === 'Bot' && 
+              c.body.includes('💰 CloudFormation Cost Estimate')
+            );
+            
+            const commentBody = botComment 
+              ? await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: comment,
+                })
+              : await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: comment,
+                });
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cost-estimate
+          path: |
+            cost-comment.md
+            cost-data.json
+          retention-days: 30
+
