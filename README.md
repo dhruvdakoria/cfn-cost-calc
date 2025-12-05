@@ -24,6 +24,34 @@ npm install -g cfn-cost-estimate
 npm install --save-dev cfn-cost-estimate
 ```
 
+## Pricing Data
+
+This tool uses the [Infracost Cloud Pricing API](https://www.infracost.io/docs/supported_resources/cloud_pricing_api/) to fetch accurate, up-to-date AWS pricing data. The pricing data is stored in `data/aws-pricing.json` and supports:
+
+- **us-east-1** (US East - N. Virginia)
+- **ca-central-1** (Canada - Central)
+
+### Updating Pricing Data
+
+To update the pricing data with the latest prices from Infracost:
+
+```bash
+# First, configure your Infracost API key
+infracost configure set api_key YOUR_API_KEY
+
+# Then run the update script
+npm run update-pricing
+```
+
+The script fetches pricing for:
+- 180+ EC2 instance types
+- All EBS volume types with IOPS and throughput pricing
+- 170+ RDS instance types across 5 database engines
+- 28+ ElastiCache node types
+- 22+ OpenSearch instance types
+- 11+ DocumentDB instance types
+- Lambda, Fargate, NAT Gateway, Load Balancers, EKS, and more
+
 ## Quick Start
 
 ### Basic Usage
@@ -225,41 +253,99 @@ jobs:
 
 ## Supported AWS Resources
 
+Pricing data is fetched from the [Infracost Cloud Pricing API](https://www.infracost.io/docs/supported_resources/cloud_pricing_api/), which provides accurate, real-time AWS pricing for all major AWS services.
+
 ### High Confidence Pricing (Fixed Costs)
 
 | Resource Type | Pricing Components |
 |--------------|-------------------|
-| `AWS::EC2::Instance` | Instance type hourly rate |
-| `AWS::EC2::Volume` | Storage type, size, IOPS |
-| `AWS::RDS::DBInstance` | Instance class, storage, Multi-AZ |
+| **Compute** ||
+| `AWS::EC2::Instance` | 180+ instance types with hourly rates |
+| `AWS::EC2::Volume` | All EBS types (gp2, gp3, io1, io2, st1, sc1) with IOPS/throughput |
+| `AWS::EC2::Snapshot` | Snapshot storage |
+| `AWS::AutoScaling::AutoScalingGroup` | Based on instance count and type |
+| `AWS::Lightsail::Instance` | Bundle pricing |
+| **Containers** ||
+| `AWS::EKS::Cluster` | Cluster hourly rate |
+| `AWS::ECS::Service` | Fargate vCPU + memory |
+| **Databases** ||
+| `AWS::RDS::DBInstance` | 170+ instance types across MySQL, PostgreSQL, MariaDB |
 | `AWS::RDS::DBCluster` | Aurora Serverless ACUs |
-| `AWS::ElastiCache::CacheCluster` | Node type, count |
+| `AWS::ElastiCache::CacheCluster` | 28+ node types |
 | `AWS::ElastiCache::ReplicationGroup` | Node type, node groups, replicas |
+| `AWS::OpenSearchService::Domain` | 22+ instance types |
+| `AWS::Elasticsearch::Domain` | Legacy Elasticsearch instances |
+| `AWS::DocDB::DBCluster` / `AWS::DocDB::DBInstance` | DocumentDB instances + storage |
+| `AWS::Neptune::DBCluster` / `AWS::Neptune::DBInstance` | Neptune instances + storage |
+| `AWS::Redshift::Cluster` | Redshift node types |
+| **Networking** ||
 | `AWS::EC2::NatGateway` | Hourly + data processing |
 | `AWS::ElasticLoadBalancingV2::LoadBalancer` | ALB/NLB hourly + LCU |
-| `AWS::EKS::Cluster` | Cluster hourly rate |
+| `AWS::ElasticLoadBalancing::LoadBalancer` | Classic ELB hourly |
+| `AWS::EC2::VPCEndpoint` | Interface endpoints per AZ |
+| `AWS::EC2::VPNConnection` | VPN connection hourly |
+| `AWS::EC2::TransitGateway` | Transit gateway hourly + attachments |
+| `AWS::DirectConnect::Connection` | Port hours by bandwidth |
+| `AWS::GlobalAccelerator::Accelerator` | Accelerator hourly |
+| `AWS::NetworkFirewall::Firewall` | Endpoints + data processing |
+| **Messaging & Streaming** ||
+| `AWS::Kinesis::Stream` | Shard hours |
+| `AWS::KinesisFirehose::DeliveryStream` | Data ingested |
+| `AWS::MSK::Cluster` | Kafka broker instances |
+| `AWS::AmazonMQ::Broker` | MQ broker instances |
+| **Security & Management** ||
 | `AWS::SecretsManager::Secret` | Per secret per month |
 | `AWS::KMS::Key` | Per key per month |
-| `AWS::Route53::HostedZone` | Per hosted zone |
-| `AWS::CloudWatch::Alarm` | Per alarm |
+| `AWS::WAFv2::WebACL` / `AWS::WAF::WebACL` | Web ACL + rules + requests |
+| `AWS::Config::ConfigRule` | Config rules |
+| `AWS::CloudTrail::Trail` | Data events |
+| `AWS::CloudWatch::Alarm` | Per alarm (standard/high-res) |
 | `AWS::CloudWatch::Dashboard` | Per dashboard |
-| `AWS::EC2::VPCEndpoint` | Interface endpoints per AZ |
+| **Storage** ||
+| `AWS::EFS::FileSystem` | Standard + IA storage, provisioned throughput |
+| `AWS::FSx::FileSystem` | Lustre, Windows, ONTAP, OpenZFS |
+| `AWS::Backup::BackupVault` | Backup storage |
+| **Developer Tools** ||
+| `AWS::CodeBuild::Project` | Build minutes by compute type |
+| `AWS::CodePipeline::Pipeline` | Active pipeline |
+| `AWS::Glue::Job` / `AWS::Glue::Crawler` | DPU hours |
+| **Migration** ||
+| `AWS::DMS::ReplicationInstance` | DMS instance types |
+| `AWS::Transfer::Server` | Transfer Family protocols |
+| **Other** ||
+| `AWS::Route53::HostedZone` | Per hosted zone |
+| `AWS::ACMPCA::CertificateAuthority` | Private CA |
+| `AWS::SageMaker::NotebookInstance` | Notebook instance types |
+| `AWS::Grafana::Workspace` | Managed Grafana users |
 
 ### Usage-Based Estimates (Lower Confidence)
 
 | Resource Type | Estimation Basis |
 |--------------|-----------------|
 | `AWS::Lambda::Function` | 100K invocations/month estimate |
-| `AWS::DynamoDB::Table` | Provisioned capacity or on-demand estimates |
+| `AWS::DynamoDB::Table` | Provisioned RCU/WCU or on-demand estimates |
 | `AWS::S3::Bucket` | 100GB storage estimate |
-| `AWS::SQS::Queue` | 1M requests/month estimate |
-| `AWS::ApiGateway::RestApi` | 1M requests/month estimate |
-| `AWS::ApiGatewayV2::Api` | 1M requests/month estimate |
-| `AWS::StepFunctions::StateMachine` | 10K executions/month estimate |
+| `AWS::SQS::Queue` | 1M requests/month (Standard/FIFO) |
+| `AWS::ApiGateway::RestApi` | 1M requests/month (REST API) |
+| `AWS::ApiGatewayV2::Api` | 1M requests/month (HTTP API) |
+| `AWS::StepFunctions::StateMachine` | 10K executions/month (Standard/Express) |
+| `AWS::CloudFront::Distribution` | 100GB transfer, 1M requests estimate |
 
 ### Free Resources (Not Priced)
 
-IAM resources, security groups, route tables, Lambda permissions, event rules, and other configuration-only resources are excluded from cost calculations.
+Based on the [Infracost free resources documentation](https://www.infracost.io/docs/supported_resources/aws/), over 200+ resource types are recognized as free/configuration-only:
+
+- **IAM**: Roles, policies, users, groups, instance profiles
+- **VPC**: Security groups, route tables, subnets, VPCs, internet gateways
+- **Lambda**: Permissions, event source mappings, aliases, versions, layers
+- **Logs**: Log groups, streams, subscription filters
+- **Events**: Rules, event buses, archives
+- **Auto Scaling**: Scaling policies, targets, lifecycle hooks
+- **API Gateway**: REST APIs, routes, stages, authorizers (requests have cost)
+- **ECS/EKS**: Clusters, task definitions, capacity providers
+- **RDS/ElastiCache**: Subnet groups, parameter groups
+- **CloudFormation**: Stacks, custom resources, macros
+- **And many more...**
 
 ## Programmatic Usage
 

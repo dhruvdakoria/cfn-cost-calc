@@ -1,0 +1,579 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Test template to verify free vs paid resource classification. Based on https://www.infracost.io/docs/supported_resources/aws/",
+  "Resources": {
+    "_Comment": "========== PAID RESOURCES - Should show costs ==========",
+    
+    "PaidEC2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": "t3.medium",
+        "ImageId": "ami-12345678"
+      }
+    },
+    
+    "PaidEBSVolume": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "AvailabilityZone": "us-east-1a",
+        "Size": 100,
+        "VolumeType": "gp3"
+      }
+    },
+    
+    "PaidRDSInstance": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBInstanceClass": "db.t3.medium",
+        "Engine": "mysql",
+        "AllocatedStorage": 50
+      }
+    },
+    
+    "PaidElastiCacheCluster": {
+      "Type": "AWS::ElastiCache::CacheCluster",
+      "Properties": {
+        "CacheNodeType": "cache.t3.micro",
+        "Engine": "redis",
+        "NumCacheNodes": 1
+      }
+    },
+    
+    "PaidNATGateway": {
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "SubnetId": "subnet-12345678",
+        "AllocationId": "eipalloc-12345678"
+      }
+    },
+    
+    "PaidALB": {
+      "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+      "Properties": {
+        "Name": "my-alb",
+        "Type": "application",
+        "Subnets": ["subnet-1", "subnet-2"]
+      }
+    },
+    
+    "PaidEKSCluster": {
+      "Type": "AWS::EKS::Cluster",
+      "Properties": {
+        "Name": "my-eks-cluster",
+        "RoleArn": "arn:aws:iam::123456789012:role/eks-role",
+        "ResourcesVpcConfig": {
+          "SubnetIds": ["subnet-1", "subnet-2"]
+        }
+      }
+    },
+    
+    "PaidLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": "my-function",
+        "Runtime": "nodejs18.x",
+        "Handler": "index.handler",
+        "MemorySize": 512,
+        "Timeout": 30,
+        "Code": {
+          "ZipFile": "exports.handler = async () => {}"
+        },
+        "Role": "arn:aws:iam::123456789012:role/lambda-role"
+      }
+    },
+    
+    "PaidDynamoDBTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "my-table",
+        "AttributeDefinitions": [
+          {"AttributeName": "id", "AttributeType": "S"}
+        ],
+        "KeySchema": [
+          {"AttributeName": "id", "KeyType": "HASH"}
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
+      }
+    },
+    
+    "PaidS3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": "my-test-bucket"
+      }
+    },
+    
+    "PaidSQSQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "my-queue"
+      }
+    },
+    
+    "PaidSecretsManagerSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Name": "my-secret"
+      }
+    },
+    
+    "PaidKMSKey": {
+      "Type": "AWS::KMS::Key",
+      "Properties": {
+        "Description": "My KMS key"
+      }
+    },
+    
+    "PaidRoute53HostedZone": {
+      "Type": "AWS::Route53::HostedZone",
+      "Properties": {
+        "Name": "example.com"
+      }
+    },
+    
+    "PaidCloudWatchAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": "my-alarm",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": 300,
+        "EvaluationPeriods": 2,
+        "Threshold": 80,
+        "ComparisonOperator": "GreaterThanThreshold"
+      }
+    },
+    
+    "PaidVPCEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": "vpc-12345678",
+        "ServiceName": "com.amazonaws.us-east-1.ssm",
+        "VpcEndpointType": "Interface",
+        "SubnetIds": ["subnet-1", "subnet-2"]
+      }
+    },
+    
+    "PaidOpenSearchDomain": {
+      "Type": "AWS::OpenSearchService::Domain",
+      "Properties": {
+        "DomainName": "my-domain",
+        "ClusterConfig": {
+          "InstanceType": "t3.small.search",
+          "InstanceCount": 1
+        }
+      }
+    },
+    
+    "PaidKinesisStream": {
+      "Type": "AWS::Kinesis::Stream",
+      "Properties": {
+        "Name": "my-stream",
+        "ShardCount": 2
+      }
+    },
+    
+    "PaidMSKCluster": {
+      "Type": "AWS::MSK::Cluster",
+      "Properties": {
+        "ClusterName": "my-msk-cluster",
+        "KafkaVersion": "2.8.1",
+        "NumberOfBrokerNodes": 3,
+        "BrokerNodeGroupInfo": {
+          "InstanceType": "kafka.t3.small",
+          "ClientSubnets": ["subnet-1", "subnet-2", "subnet-3"]
+        }
+      }
+    },
+    
+    "PaidRedshiftCluster": {
+      "Type": "AWS::Redshift::Cluster",
+      "Properties": {
+        "ClusterIdentifier": "my-cluster",
+        "NodeType": "dc2.large",
+        "MasterUsername": "admin",
+        "MasterUserPassword": "Password123!",
+        "ClusterType": "single-node"
+      }
+    },
+    
+    "PaidWAFWebACL": {
+      "Type": "AWS::WAFv2::WebACL",
+      "Properties": {
+        "Name": "my-web-acl",
+        "Scope": "REGIONAL",
+        "DefaultAction": {"Allow": {}},
+        "VisibilityConfig": {
+          "SampledRequestsEnabled": true,
+          "CloudWatchMetricsEnabled": true,
+          "MetricName": "my-waf-metric"
+        },
+        "Rules": [
+          {
+            "Name": "rule1",
+            "Priority": 1,
+            "Statement": {
+              "ByteMatchStatement": {
+                "FieldToMatch": {"UriPath": {}},
+                "PositionalConstraint": "STARTS_WITH",
+                "SearchString": "/admin",
+                "TextTransformations": [{"Priority": 0, "Type": "NONE"}]
+              }
+            },
+            "Action": {"Block": {}},
+            "VisibilityConfig": {
+              "SampledRequestsEnabled": true,
+              "CloudWatchMetricsEnabled": true,
+              "MetricName": "rule1"
+            }
+          }
+        ]
+      }
+    },
+    
+    "PaidSSMParameter": {
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Name": "/my/parameter",
+        "Type": "String",
+        "Value": "my-value"
+      }
+    },
+    
+    "_Comment2": "========== FREE RESOURCES - Should NOT show costs ==========",
+    
+    "FreeIAMRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": "my-role",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"Service": "lambda.amazonaws.com"},
+            "Action": "sts:AssumeRole"
+          }]
+        }
+      }
+    },
+    
+    "FreeIAMPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "my-policy",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Action": ["logs:*"],
+            "Resource": "*"
+          }]
+        },
+        "Roles": [{"Ref": "FreeIAMRole"}]
+      }
+    },
+    
+    "FreeSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "My security group",
+        "VpcId": "vpc-12345678"
+      }
+    },
+    
+    "FreeSecurityGroupIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {"Ref": "FreeSecurityGroup"},
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    
+    "FreeRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": "vpc-12345678"
+      }
+    },
+    
+    "FreeRoute": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {"Ref": "FreeRouteTable"},
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": "igw-12345678"
+      }
+    },
+    
+    "FreeLambdaPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {"Ref": "PaidLambdaFunction"},
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com"
+      }
+    },
+    
+    "FreeLambdaEventSourceMapping": {
+      "Type": "AWS::Lambda::EventSourceMapping",
+      "Properties": {
+        "FunctionName": {"Ref": "PaidLambdaFunction"},
+        "EventSourceArn": {"Fn::GetAtt": ["PaidSQSQueue", "Arn"]},
+        "BatchSize": 10
+      }
+    },
+    
+    "PaidLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/my-function"
+      }
+    },
+    
+    "FreeLogStream": {
+      "Type": "AWS::Logs::LogStream",
+      "Properties": {
+        "LogGroupName": {"Ref": "PaidLogGroup"},
+        "LogStreamName": "my-stream"
+      }
+    },
+    
+    "FreeSQSQueuePolicy": {
+      "Type": "AWS::SQS::QueuePolicy",
+      "Properties": {
+        "Queues": [{"Ref": "PaidSQSQueue"}],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "sqs:SendMessage",
+            "Resource": {"Fn::GetAtt": ["PaidSQSQueue", "Arn"]}
+          }]
+        }
+      }
+    },
+    
+    "FreeEventsRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Name": "my-rule",
+        "ScheduleExpression": "rate(1 hour)",
+        "State": "ENABLED",
+        "Targets": [{
+          "Id": "lambda-target",
+          "Arn": {"Fn::GetAtt": ["PaidLambdaFunction", "Arn"]}
+        }]
+      }
+    },
+    
+    "FreeKMSAlias": {
+      "Type": "AWS::KMS::Alias",
+      "Properties": {
+        "AliasName": "alias/my-key",
+        "TargetKeyId": {"Ref": "PaidKMSKey"}
+      }
+    },
+    
+    "FreeS3BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {"Ref": "PaidS3Bucket"},
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": {"Fn::Sub": "arn:aws:s3:::${PaidS3Bucket}/*"}
+          }]
+        }
+      }
+    },
+    
+    "FreeRDSSubnetGroup": {
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {
+        "DBSubnetGroupDescription": "My subnet group",
+        "SubnetIds": ["subnet-1", "subnet-2"]
+      }
+    },
+    
+    "FreeRDSParameterGroup": {
+      "Type": "AWS::RDS::DBParameterGroup",
+      "Properties": {
+        "Description": "My parameter group",
+        "Family": "mysql8.0"
+      }
+    },
+    
+    "FreeElastiCacheSubnetGroup": {
+      "Type": "AWS::ElastiCache::SubnetGroup",
+      "Properties": {
+        "Description": "My cache subnet group",
+        "SubnetIds": ["subnet-1", "subnet-2"]
+      }
+    },
+    
+    "FreeELBListener": {
+      "Type": "AWS::ElasticLoadBalancingV2::Listener",
+      "Properties": {
+        "LoadBalancerArn": {"Ref": "PaidALB"},
+        "Port": 443,
+        "Protocol": "HTTPS",
+        "DefaultActions": [{
+          "Type": "forward",
+          "TargetGroupArn": {"Ref": "FreeTargetGroup"}
+        }],
+        "Certificates": [{"CertificateArn": "arn:aws:acm:us-east-1:123456789012:certificate/abc"}]
+      }
+    },
+    
+    "FreeTargetGroup": {
+      "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+      "Properties": {
+        "Name": "my-tg",
+        "Port": 80,
+        "Protocol": "HTTP",
+        "VpcId": "vpc-12345678",
+        "TargetType": "instance"
+      }
+    },
+    
+    "FreeECSCluster": {
+      "Type": "AWS::ECS::Cluster",
+      "Properties": {
+        "ClusterName": "my-cluster"
+      }
+    },
+    
+    "FreeECSTaskDefinition": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "Family": "my-task",
+        "Cpu": "256",
+        "Memory": "512",
+        "NetworkMode": "awsvpc",
+        "RequiresCompatibilities": ["FARGATE"],
+        "ContainerDefinitions": [{
+          "Name": "my-container",
+          "Image": "nginx:latest",
+          "PortMappings": [{"ContainerPort": 80}]
+        }]
+      }
+    },
+    
+    "FreeEKSAddon": {
+      "Type": "AWS::EKS::Addon",
+      "Properties": {
+        "ClusterName": {"Ref": "PaidEKSCluster"},
+        "AddonName": "vpc-cni"
+      }
+    },
+    
+    "FreeApiGatewayDeployment": {
+      "Type": "AWS::ApiGateway::Deployment",
+      "Properties": {
+        "RestApiId": "api-12345678"
+      }
+    },
+    
+    "FreeWAFIPSet": {
+      "Type": "AWS::WAFv2::IPSet",
+      "Properties": {
+        "Name": "my-ip-set",
+        "Scope": "REGIONAL",
+        "IPAddressVersion": "IPV4",
+        "Addresses": ["192.0.2.0/24"]
+      }
+    },
+    
+    "FreeWAFRuleGroup": {
+      "Type": "AWS::WAFv2::RuleGroup",
+      "Properties": {
+        "Name": "my-rule-group",
+        "Scope": "REGIONAL",
+        "Capacity": 100,
+        "VisibilityConfig": {
+          "SampledRequestsEnabled": true,
+          "CloudWatchMetricsEnabled": true,
+          "MetricName": "my-rule-group"
+        }
+      }
+    },
+    
+    "FreeGlueTable": {
+      "Type": "AWS::Glue::Table",
+      "Properties": {
+        "CatalogId": "123456789012",
+        "DatabaseName": "my-database",
+        "TableInput": {
+          "Name": "my-table",
+          "TableType": "EXTERNAL_TABLE"
+        }
+      }
+    },
+    
+    "FreeSSMAssociation": {
+      "Type": "AWS::SSM::Association",
+      "Properties": {
+        "Name": "AWS-RunPatchBaseline",
+        "Targets": [{
+          "Key": "tag:Environment",
+          "Values": ["Production"]
+        }]
+      }
+    },
+    
+    "FreeSSMMaintenanceWindow": {
+      "Type": "AWS::SSM::MaintenanceWindow",
+      "Properties": {
+        "Name": "my-maintenance-window",
+        "Schedule": "rate(7 days)",
+        "Duration": 2,
+        "Cutoff": 1,
+        "AllowUnassociatedTargets": false
+      }
+    },
+    
+    "FreeVPNGateway": {
+      "Type": "AWS::EC2::VPNGateway",
+      "Properties": {
+        "Type": "ipsec.1"
+      }
+    },
+    
+    "FreeInternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {}
+    },
+    
+    "FreeLaunchTemplate": {
+      "Type": "AWS::EC2::LaunchTemplate",
+      "Properties": {
+        "LaunchTemplateName": "my-template",
+        "LaunchTemplateData": {
+          "InstanceType": "t3.micro",
+          "ImageId": "ami-12345678"
+        }
+      }
+    },
+    
+    "FreeCustomerGateway": {
+      "Type": "AWS::EC2::CustomerGateway",
+      "Properties": {
+        "BgpAsn": 65000,
+        "IpAddress": "203.0.113.1",
+        "Type": "ipsec.1"
+      }
+    }
+  }
+}
+

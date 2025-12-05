@@ -4,18 +4,18 @@
  */
 
 import { CloudFormationTemplate, CloudFormationResource, ResourceCost, CostDetail, StackCostEstimate, UnsupportedResource } from './types';
-import { getRegionalPricing, HOURS_PER_MONTH, FREE_RESOURCES, USAGE_BASED_RESOURCES, RegionalPricing } from './pricing-data';
+import { getRegionalPricing, HOURS_PER_MONTH, FREE_RESOURCES, USAGE_BASED_RESOURCES, AWSpricingData } from './pricing-data';
 import { TemplateParser } from './template-parser';
 
 type ResourceCostCalculator = (
   logicalId: string,
   resource: CloudFormationResource,
   template: CloudFormationTemplate,
-  pricing: RegionalPricing
+  pricing: AWSpricingData
 ) => ResourceCost | null;
 
 export class CostCalculator {
-  private pricing: RegionalPricing;
+  private pricing: AWSpricingData;
   private region: string;
   private calculators: Map<string, ResourceCostCalculator>;
   
@@ -132,6 +132,14 @@ export class CostCalculator {
         return this.calculateApiGatewayCost(logicalId, resource, template);
       case 'AWS::StepFunctions::StateMachine':
         return this.calculateStepFunctionsCost(logicalId, resource, template);
+      case 'AWS::SNS::Topic':
+        return this.calculateSNSCost(logicalId, resource, template);
+      case 'AWS::Logs::LogGroup':
+        return this.calculateCloudWatchLogsCost(logicalId, resource, template);
+      case 'AWS::SSM::Parameter':
+        return this.calculateSSMParameterCost(logicalId, resource, template);
+      case 'AWS::ECR::Repository':
+        return this.calculateECRCost(logicalId, resource, template);
       default:
         return null;
     }
@@ -146,7 +154,7 @@ export class CostCalculator {
     // EC2 Instance
     calculators.set('AWS::EC2::Instance', (logicalId, resource, template, pricing) => {
       const instanceType = TemplateParser.getPropertyValue(template, resource, 'InstanceType', 't3.micro') as string;
-      const hourlyPrice = pricing.ec2[instanceType] || pricing.ec2['t3.micro'];
+      const hourlyPrice = pricing.ec2.instances[instanceType] || pricing.ec2.instances['t3.micro'] || 0.0104;
       
       return {
         resourceId: logicalId,
@@ -178,7 +186,7 @@ export class CostCalculator {
       
       // Use desired capacity as the baseline for estimation
       const instanceCount = typeof desiredCapacity === 'number' ? desiredCapacity : minSize;
-      const hourlyPrice = pricing.ec2[instanceType] || pricing.ec2['t3.micro'];
+      const hourlyPrice = pricing.ec2.instances[instanceType] || pricing.ec2.instances['t3.micro'] || 0.0104;
       
       return {
         resourceId: logicalId,
@@ -202,9 +210,9 @@ export class CostCalculator {
       const volumeType = (TemplateParser.getPropertyValue(template, resource, 'VolumeType', 'gp3') as string).toLowerCase();
       const size = TemplateParser.getPropertyValue(template, resource, 'Size', 100) as number;
       const iops = TemplateParser.getPropertyValue(template, resource, 'Iops', 3000) as number;
+      const throughput = TemplateParser.getPropertyValue(template, resource, 'Throughput', 125) as number;
       
-      const priceKey = volumeType as keyof typeof pricing.ebs;
-      const pricePerGB = pricing.ebs[priceKey] || pricing.ebs.gp3;
+      const pricePerGB = pricing.ebs.volumes[volumeType] || pricing.ebs.volumes['gp3'] || 0.08;
       let monthlyCost = pricePerGB * size;
       
       const details: CostDetail[] = [{
@@ -215,9 +223,9 @@ export class CostCalculator {
         unit: 'GB/month',
       }];
       
-      // Add IOPS cost for io1/io2
+      // Add IOPS cost for io1/io2/gp3
       if (volumeType === 'io1' || volumeType === 'io2') {
-        const iopsPrice = 0.065; // per IOPS/month
+        const iopsPrice = pricing.ebs.iops[volumeType] || 0.065;
         const iopsCost = iopsPrice * iops;
         monthlyCost += iopsCost;
         details.push({
@@ -226,6 +234,33 @@ export class CostCalculator {
           unitPrice: iopsPrice,
           monthlyCost: iopsCost,
           unit: 'IOPS/month',
+        });
+      } else if (volumeType === 'gp3' && iops > 3000) {
+        const additionalIops = iops - 3000;
+        const iopsPrice = pricing.ebs.iops['gp3'] || 0.005;
+        const iopsCost = iopsPrice * additionalIops;
+        monthlyCost += iopsCost;
+        details.push({
+          component: 'Additional IOPS (above 3000)',
+          quantity: additionalIops,
+          unitPrice: iopsPrice,
+          monthlyCost: iopsCost,
+          unit: 'IOPS/month',
+        });
+      }
+      
+      // Add throughput cost for gp3
+      if (volumeType === 'gp3' && throughput > 125) {
+        const additionalThroughput = throughput - 125;
+        const throughputPrice = pricing.ebs.throughput['gp3'] || 0.04;
+        const throughputCost = throughputPrice * additionalThroughput;
+        monthlyCost += throughputCost;
+        details.push({
+          component: 'Additional Throughput (above 125 MBps)',
+          quantity: additionalThroughput,
+          unitPrice: throughputPrice,
+          monthlyCost: throughputCost,
+          unit: 'MBps/month',
         });
       }
       
@@ -245,12 +280,19 @@ export class CostCalculator {
       const instanceClass = TemplateParser.getPropertyValue(template, resource, 'DBInstanceClass', 'db.t3.micro') as string;
       const allocatedStorage = TemplateParser.getPropertyValue(template, resource, 'AllocatedStorage', 20) as number;
       const multiAZ = TemplateParser.getPropertyValue(template, resource, 'MultiAZ', false) as boolean;
-      const storageType = TemplateParser.getPropertyValue(template, resource, 'StorageType', 'gp2') as string;
+      const storageType = (TemplateParser.getPropertyValue(template, resource, 'StorageType', 'gp2') as string).toLowerCase();
+      const engine = (TemplateParser.getPropertyValue(template, resource, 'Engine', 'mysql') as string).toLowerCase();
       
-      const hourlyPrice = pricing.rds[instanceClass] || pricing.rds['db.t3.micro'];
+      // Find hourly price from pricing data
+      let hourlyPrice = 0.017; // default
+      const enginePricing = pricing.rds.instances[engine] || pricing.rds.instances['mysql'];
+      if (enginePricing) {
+        hourlyPrice = enginePricing[instanceClass] || enginePricing['db.t3.micro'] || 0.017;
+      }
+      
       const instanceCost = hourlyPrice * HOURS_PER_MONTH * (multiAZ ? 2 : 1);
       
-      const storagePrice = storageType === 'io1' ? 0.125 : 0.115; // GP2/GP3
+      const storagePrice = pricing.rds.storage[storageType] || pricing.rds.storage['gp2'] || 0.115;
       const storageCost = storagePrice * allocatedStorage * (multiAZ ? 2 : 1);
       
       const details: CostDetail[] = [
@@ -334,7 +376,7 @@ export class CostCalculator {
       const nodeType = TemplateParser.getPropertyValue(template, resource, 'CacheNodeType', 'cache.t3.micro') as string;
       const numNodes = TemplateParser.getPropertyValue(template, resource, 'NumCacheNodes', 1) as number;
       
-      const hourlyPrice = pricing.elasticache[nodeType] || pricing.elasticache['cache.t3.micro'];
+      const hourlyPrice = pricing.elasticache.nodes[nodeType] || pricing.elasticache.nodes['cache.t3.micro'] || 0.017;
       const monthlyCost = hourlyPrice * HOURS_PER_MONTH * numNodes;
       
       return {
@@ -361,7 +403,7 @@ export class CostCalculator {
       const replicasPerNodeGroup = TemplateParser.getPropertyValue(template, resource, 'ReplicasPerNodeGroup', 1) as number;
       
       const totalNodes = numNodeGroups * (1 + replicasPerNodeGroup);
-      const hourlyPrice = pricing.elasticache[nodeType] || pricing.elasticache['cache.t3.micro'];
+      const hourlyPrice = pricing.elasticache.nodes[nodeType] || pricing.elasticache.nodes['cache.t3.micro'] || 0.017;
       const monthlyCost = hourlyPrice * HOURS_PER_MONTH * totalNodes;
       
       return {
@@ -383,30 +425,32 @@ export class CostCalculator {
     
     // NAT Gateway
     calculators.set('AWS::EC2::NatGateway', (logicalId, resource, template, pricing) => {
-      const monthlyCost = pricing.nat.gatewayPerHour * HOURS_PER_MONTH;
+      const hourlyPrice = pricing.natGateway.hourly || 0.045;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
       
       // Add estimated data processing cost (assume 100GB/month)
       const estimatedDataGB = 100;
-      const dataProcessingCost = pricing.nat.dataProcessedPerGB * estimatedDataGB;
+      const dataPrice = pricing.natGateway.perGB || 0.045;
+      const dataProcessingCost = dataPrice * estimatedDataGB;
       
       return {
         resourceId: logicalId,
         resourceType: 'AWS::EC2::NatGateway',
         monthlyCost: monthlyCost + dataProcessingCost,
-        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        hourlyCost: hourlyPrice,
         unit: 'gateway',
         details: [
           {
             component: 'NAT Gateway Hourly',
             quantity: HOURS_PER_MONTH,
-            unitPrice: pricing.nat.gatewayPerHour,
+            unitPrice: hourlyPrice,
             monthlyCost,
             unit: 'hours',
           },
           {
             component: 'Data Processing (est. 100GB)',
             quantity: estimatedDataGB,
-            unitPrice: pricing.nat.dataProcessedPerGB,
+            unitPrice: dataPrice,
             monthlyCost: dataProcessingCost,
             unit: 'GB',
           },
@@ -420,32 +464,34 @@ export class CostCalculator {
       const type = TemplateParser.getPropertyValue(template, resource, 'Type', 'application') as string;
       
       const isNLB = type.toLowerCase() === 'network';
-      const lbPricing = isNLB ? pricing.nlb : pricing.alb;
+      const lbPricing = isNLB ? pricing.loadBalancer.nlb : pricing.loadBalancer.alb;
       
-      const baseHourlyCost = lbPricing.perHour * HOURS_PER_MONTH;
+      const hourlyPrice = lbPricing.hourly || 0.0225;
+      const lcuHourlyPrice = lbPricing.lcuHourly || 0.008;
+      const baseMonthlyCost = hourlyPrice * HOURS_PER_MONTH;
       
       // Estimate LCU cost (assume 10 LCU average)
       const estimatedLCU = 10;
-      const lcuCost = lbPricing.lcuPerHour * HOURS_PER_MONTH * estimatedLCU;
+      const lcuCost = lcuHourlyPrice * HOURS_PER_MONTH * estimatedLCU;
       
       return {
         resourceId: logicalId,
         resourceType: 'AWS::ElasticLoadBalancingV2::LoadBalancer',
-        monthlyCost: baseHourlyCost + lcuCost,
-        hourlyCost: (baseHourlyCost + lcuCost) / HOURS_PER_MONTH,
+        monthlyCost: baseMonthlyCost + lcuCost,
+        hourlyCost: hourlyPrice + (lcuHourlyPrice * estimatedLCU),
         unit: 'load balancer',
         details: [
           {
             component: `${isNLB ? 'NLB' : 'ALB'} Hourly`,
             quantity: HOURS_PER_MONTH,
-            unitPrice: lbPricing.perHour,
-            monthlyCost: baseHourlyCost,
+            unitPrice: hourlyPrice,
+            monthlyCost: baseMonthlyCost,
             unit: 'hours',
           },
           {
             component: 'LCU (est. 10 avg)',
             quantity: estimatedLCU * HOURS_PER_MONTH,
-            unitPrice: lbPricing.lcuPerHour,
+            unitPrice: lcuHourlyPrice,
             monthlyCost: lcuCost,
             unit: 'LCU-hours',
           },
@@ -456,7 +502,7 @@ export class CostCalculator {
     
     // Classic Load Balancer
     calculators.set('AWS::ElasticLoadBalancing::LoadBalancer', (logicalId, resource, template, pricing) => {
-      const elbHourlyPrice = 0.025;
+      const elbHourlyPrice = pricing.loadBalancer.clb.hourly || 0.025;
       const monthlyCost = elbHourlyPrice * HOURS_PER_MONTH;
       
       return {
@@ -501,8 +547,10 @@ export class CostCalculator {
       }
       
       // Estimate Fargate cost (assume 0.5 vCPU, 1GB memory)
-      const vcpuCost = pricing.ecs.fargateVCPUPerHour * 0.5 * HOURS_PER_MONTH;
-      const memoryCost = pricing.ecs.fargateMemoryPerGBHour * 1 * HOURS_PER_MONTH;
+      const vcpuHourly = pricing.fargate.vcpuHourly || 0.04048;
+      const memoryHourly = pricing.fargate.memoryGBHourly || 0.004445;
+      const vcpuCost = vcpuHourly * 0.5 * HOURS_PER_MONTH;
+      const memoryCost = memoryHourly * 1 * HOURS_PER_MONTH;
       const perTaskCost = vcpuCost + memoryCost;
       
       return {
@@ -533,18 +581,19 @@ export class CostCalculator {
     
     // EKS Cluster
     calculators.set('AWS::EKS::Cluster', (logicalId, resource, template, pricing) => {
-      const monthlyCost = pricing.eks.clusterPerHour * HOURS_PER_MONTH;
+      const hourlyPrice = pricing.eks.clusterHourly || 0.10;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
       
       return {
         resourceId: logicalId,
         resourceType: 'AWS::EKS::Cluster',
         monthlyCost,
-        hourlyCost: pricing.eks.clusterPerHour,
+        hourlyCost: hourlyPrice,
         unit: 'cluster',
         details: [{
           component: 'EKS Cluster',
           quantity: HOURS_PER_MONTH,
-          unitPrice: pricing.eks.clusterPerHour,
+          unitPrice: hourlyPrice,
           monthlyCost,
           unit: 'hours',
         }],
@@ -554,7 +603,8 @@ export class CostCalculator {
     
     // Secrets Manager
     calculators.set('AWS::SecretsManager::Secret', (logicalId, resource, template, pricing) => {
-      const monthlyCost = pricing.secretsManager.perSecretPerMonth;
+      const secretPrice = pricing.other?.secretsManager?.secret || 0.40;
+      const monthlyCost = secretPrice;
       
       return {
         resourceId: logicalId,
@@ -565,7 +615,7 @@ export class CostCalculator {
         details: [{
           component: 'Secrets Manager Secret',
           quantity: 1,
-          unitPrice: pricing.secretsManager.perSecretPerMonth,
+          unitPrice: secretPrice,
           monthlyCost,
           unit: 'secret/month',
         }],
@@ -575,7 +625,8 @@ export class CostCalculator {
     
     // KMS Key
     calculators.set('AWS::KMS::Key', (logicalId, resource, template, pricing) => {
-      const monthlyCost = pricing.kms.perKeyPerMonth;
+      const keyPrice = pricing.other?.kms?.key || 1.00;
+      const monthlyCost = keyPrice;
       
       return {
         resourceId: logicalId,
@@ -586,7 +637,7 @@ export class CostCalculator {
         details: [{
           component: 'KMS Customer Managed Key',
           quantity: 1,
-          unitPrice: pricing.kms.perKeyPerMonth,
+          unitPrice: keyPrice,
           monthlyCost,
           unit: 'key/month',
         }],
@@ -596,7 +647,8 @@ export class CostCalculator {
     
     // Route53 Hosted Zone
     calculators.set('AWS::Route53::HostedZone', (logicalId, resource, template, pricing) => {
-      const monthlyCost = pricing.route53.hostedZonePerMonth;
+      const zonePrice = pricing.other?.route53?.hostedZone || 0.50;
+      const monthlyCost = zonePrice;
       
       return {
         resourceId: logicalId,
@@ -607,7 +659,7 @@ export class CostCalculator {
         details: [{
           component: 'Route53 Hosted Zone',
           quantity: 1,
-          unitPrice: pricing.route53.hostedZonePerMonth,
+          unitPrice: zonePrice,
           monthlyCost,
           unit: 'zone/month',
         }],
@@ -617,7 +669,8 @@ export class CostCalculator {
     
     // CloudWatch Alarm
     calculators.set('AWS::CloudWatch::Alarm', (logicalId, resource, template, pricing) => {
-      const monthlyCost = pricing.cloudwatch.alarmsPerMonth;
+      const alarmPrice = pricing.other?.cloudwatch?.alarmStandard || 0.10;
+      const monthlyCost = alarmPrice;
       
       return {
         resourceId: logicalId,
@@ -628,7 +681,7 @@ export class CostCalculator {
         details: [{
           component: 'CloudWatch Alarm',
           quantity: 1,
-          unitPrice: pricing.cloudwatch.alarmsPerMonth,
+          unitPrice: alarmPrice,
           monthlyCost,
           unit: 'alarm/month',
         }],
@@ -638,7 +691,8 @@ export class CostCalculator {
     
     // CloudWatch Dashboard
     calculators.set('AWS::CloudWatch::Dashboard', (logicalId, resource, template, pricing) => {
-      const monthlyCost = pricing.cloudwatch.dashboardsPerMonth;
+      const dashboardPrice = pricing.other?.cloudwatch?.dashboards || 3.00;
+      const monthlyCost = dashboardPrice;
       
       return {
         resourceId: logicalId,
@@ -649,7 +703,7 @@ export class CostCalculator {
         details: [{
           component: 'CloudWatch Dashboard',
           quantity: 1,
-          unitPrice: pricing.cloudwatch.dashboardsPerMonth,
+          unitPrice: dashboardPrice,
           monthlyCost,
           unit: 'dashboard/month',
         }],
@@ -702,7 +756,7 @@ export class CostCalculator {
       }
       
       // Interface endpoint - $0.01/hour per AZ + data processing
-      const hourlyPrice = 0.01;
+      const hourlyPrice = pricing.vpcEndpoint?.interfaceHourly || 0.01;
       const subnetIds = TemplateParser.getPropertyValue(template, resource, 'SubnetIds', []) as string[];
       const azCount = Math.max(subnetIds.length, 1);
       const monthlyCost = hourlyPrice * HOURS_PER_MONTH * azCount;
@@ -719,6 +773,962 @@ export class CostCalculator {
           unitPrice: hourlyPrice,
           monthlyCost,
           unit: 'endpoint-hours',
+        }],
+        confidence: 'medium',
+      };
+    });
+    
+    // EBS Snapshot
+    calculators.set('AWS::EC2::Snapshot', (logicalId, resource, template, pricing) => {
+      // Estimate 100GB snapshot
+      const estimatedSizeGB = 100;
+      const snapshotPrice = pricing.ebs?.snapshots || 0.05;
+      const monthlyCost = snapshotPrice * estimatedSizeGB;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::EC2::Snapshot',
+        monthlyCost,
+        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        unit: 'snapshot',
+        details: [{
+          component: 'EBS Snapshot Storage (est. 100GB)',
+          quantity: estimatedSizeGB,
+          unitPrice: snapshotPrice,
+          monthlyCost,
+          unit: 'GB/month',
+        }],
+        confidence: 'low',
+      };
+    });
+    
+    // Neptune Cluster
+    calculators.set('AWS::Neptune::DBCluster', (logicalId, resource, template, pricing) => {
+      // Cluster storage cost
+      const estimatedStorageGB = 100;
+      const storagePrice = pricing.neptune?.storage || 0.10;
+      const storageCost = storagePrice * estimatedStorageGB;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Neptune::DBCluster',
+        monthlyCost: storageCost,
+        hourlyCost: storageCost / HOURS_PER_MONTH,
+        unit: 'cluster',
+        details: [{
+          component: 'Neptune Storage (est. 100GB)',
+          quantity: estimatedStorageGB,
+          unitPrice: storagePrice,
+          monthlyCost: storageCost,
+          unit: 'GB/month',
+        }],
+        confidence: 'low',
+      };
+    });
+    
+    // Neptune Cluster Instance
+    calculators.set('AWS::Neptune::DBInstance', (logicalId, resource, template, pricing) => {
+      const instanceClass = TemplateParser.getPropertyValue(template, resource, 'DBInstanceClass', 'db.r5.large') as string;
+      const hourlyPrice = pricing.neptune?.instances?.[instanceClass] || pricing.neptune?.instances?.['db.r5.large'] || 0.348;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Neptune::DBInstance',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'instance',
+        details: [{
+          component: `Neptune ${instanceClass}`,
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // DocumentDB Cluster
+    calculators.set('AWS::DocDB::DBCluster', (logicalId, resource, template, pricing) => {
+      const estimatedStorageGB = 100;
+      const storagePrice = pricing.documentdb?.storage || 0.10;
+      const storageCost = storagePrice * estimatedStorageGB;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::DocDB::DBCluster',
+        monthlyCost: storageCost,
+        hourlyCost: storageCost / HOURS_PER_MONTH,
+        unit: 'cluster',
+        details: [{
+          component: 'DocumentDB Storage (est. 100GB)',
+          quantity: estimatedStorageGB,
+          unitPrice: storagePrice,
+          monthlyCost: storageCost,
+          unit: 'GB/month',
+        }],
+        confidence: 'low',
+      };
+    });
+    
+    // DocumentDB Instance
+    calculators.set('AWS::DocDB::DBInstance', (logicalId, resource, template, pricing) => {
+      const instanceClass = TemplateParser.getPropertyValue(template, resource, 'DBInstanceClass', 'db.r5.large') as string;
+      const hourlyPrice = pricing.documentdb?.instances?.[instanceClass] || pricing.documentdb?.instances?.['db.r5.large'] || 0.277;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::DocDB::DBInstance',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'instance',
+        details: [{
+          component: `DocumentDB ${instanceClass}`,
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // Redshift Cluster
+    calculators.set('AWS::Redshift::Cluster', (logicalId, resource, template, pricing) => {
+      const nodeType = TemplateParser.getPropertyValue(template, resource, 'NodeType', 'dc2.large') as string;
+      const numberOfNodes = TemplateParser.getPropertyValue(template, resource, 'NumberOfNodes', 1) as number;
+      const hourlyPrice = pricing.redshift?.instances?.[nodeType] || pricing.redshift?.instances?.['dc2.large'] || 0.25;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH * numberOfNodes;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Redshift::Cluster',
+        monthlyCost,
+        hourlyCost: hourlyPrice * numberOfNodes,
+        unit: 'cluster',
+        details: [{
+          component: `Redshift ${nodeType} (${numberOfNodes} nodes)`,
+          quantity: numberOfNodes * HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'node-hours',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // VPN Connection
+    calculators.set('AWS::EC2::VPNConnection', (logicalId, resource, template, pricing) => {
+      const hourlyPrice = pricing.vpnConnection?.hourly || 0.05;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::EC2::VPNConnection',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'connection',
+        details: [{
+          component: 'Site-to-Site VPN Connection',
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // Transit Gateway
+    calculators.set('AWS::EC2::TransitGateway', (logicalId, resource, template, pricing) => {
+      const hourlyPrice = pricing.transitGateway?.hourly || 0.05;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::EC2::TransitGateway',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'transit gateway',
+        details: [{
+          component: 'Transit Gateway',
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // Transit Gateway VPC Attachment
+    calculators.set('AWS::EC2::TransitGatewayAttachment', (logicalId, resource, template, pricing) => {
+      const hourlyPrice = pricing.transitGateway?.hourly || 0.05;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      // Add estimated data processing
+      const estimatedDataGB = 100;
+      const dataPrice = pricing.transitGateway?.dataProcessed || 0.02;
+      const dataCost = estimatedDataGB * dataPrice;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::EC2::TransitGatewayAttachment',
+        monthlyCost: monthlyCost + dataCost,
+        hourlyCost: hourlyPrice,
+        unit: 'attachment',
+        details: [
+          {
+            component: 'Transit Gateway Attachment',
+            quantity: HOURS_PER_MONTH,
+            unitPrice: hourlyPrice,
+            monthlyCost,
+            unit: 'hours',
+          },
+          {
+            component: 'Data Processing (est. 100GB)',
+            quantity: estimatedDataGB,
+            unitPrice: dataPrice,
+            monthlyCost: dataCost,
+            unit: 'GB',
+          },
+        ],
+        confidence: 'medium',
+      };
+    });
+    
+    // Direct Connect Connection
+    calculators.set('AWS::DirectConnect::Connection', (logicalId, resource, template, pricing) => {
+      const bandwidth = TemplateParser.getPropertyValue(template, resource, 'Bandwidth', '1Gbps') as string;
+      const portPrice = pricing.directConnect?.portHours?.[bandwidth] || pricing.directConnect?.portHours?.['1Gbps'] || 0.30;
+      const monthlyCost = portPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::DirectConnect::Connection',
+        monthlyCost,
+        hourlyCost: portPrice,
+        unit: 'connection',
+        details: [{
+          component: `Direct Connect ${bandwidth}`,
+          quantity: HOURS_PER_MONTH,
+          unitPrice: portPrice,
+          monthlyCost,
+          unit: 'port-hours',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // Global Accelerator
+    calculators.set('AWS::GlobalAccelerator::Accelerator', (logicalId, resource, template, pricing) => {
+      const hourlyPrice = pricing.globalAccelerator?.hourly || 0.025;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::GlobalAccelerator::Accelerator',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'accelerator',
+        details: [{
+          component: 'Global Accelerator',
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'medium',
+      };
+    });
+    
+    // MQ Broker
+    calculators.set('AWS::AmazonMQ::Broker', (logicalId, resource, template, pricing) => {
+      const instanceType = TemplateParser.getPropertyValue(template, resource, 'HostInstanceType', 'mq.t3.micro') as string;
+      const hourlyPrice = pricing.mq?.instanceHourly?.[instanceType] || pricing.mq?.instanceHourly?.['mq.t3.micro'] || 0.027;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::AmazonMQ::Broker',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'broker',
+        details: [{
+          component: `Amazon MQ ${instanceType}`,
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // MSK Cluster
+    calculators.set('AWS::MSK::Cluster', (logicalId, resource, template, pricing) => {
+      const instanceType = TemplateParser.getPropertyValue(template, resource, 'BrokerNodeGroupInfo.InstanceType', 'kafka.t3.small') as string;
+      const numberOfBrokerNodes = TemplateParser.getPropertyValue(template, resource, 'NumberOfBrokerNodes', 3) as number;
+      const hourlyPrice = pricing.msk?.instanceHourly?.[instanceType] || pricing.msk?.instanceHourly?.['kafka.t3.small'] || 0.072;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH * numberOfBrokerNodes;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::MSK::Cluster',
+        monthlyCost,
+        hourlyCost: hourlyPrice * numberOfBrokerNodes,
+        unit: 'cluster',
+        details: [{
+          component: `MSK ${instanceType} (${numberOfBrokerNodes} brokers)`,
+          quantity: numberOfBrokerNodes * HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'broker-hours',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // Kinesis Stream
+    calculators.set('AWS::Kinesis::Stream', (logicalId, resource, template, pricing) => {
+      const shardCount = TemplateParser.getPropertyValue(template, resource, 'ShardCount', 1) as number;
+      const shardHourly = pricing.kinesis?.shardHourly || 0.015;
+      const monthlyCost = shardHourly * HOURS_PER_MONTH * shardCount;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Kinesis::Stream',
+        monthlyCost,
+        hourlyCost: shardHourly * shardCount,
+        unit: 'stream',
+        details: [{
+          component: `Kinesis Stream (${shardCount} shards)`,
+          quantity: shardCount * HOURS_PER_MONTH,
+          unitPrice: shardHourly,
+          monthlyCost,
+          unit: 'shard-hours',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // Kinesis Firehose
+    calculators.set('AWS::KinesisFirehose::DeliveryStream', (logicalId, resource, template, pricing) => {
+      // Estimate 100GB/month ingested
+      const estimatedDataGB = 100;
+      const dataPrice = pricing.kinesisFirehose?.dataIngested || 0.029;
+      const monthlyCost = estimatedDataGB * dataPrice;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::KinesisFirehose::DeliveryStream',
+        monthlyCost,
+        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        unit: 'delivery stream',
+        details: [{
+          component: 'Kinesis Firehose Data Ingested (est. 100GB)',
+          quantity: estimatedDataGB,
+          unitPrice: dataPrice,
+          monthlyCost,
+          unit: 'GB',
+        }],
+        confidence: 'low',
+      };
+    });
+    
+    // EFS File System
+    calculators.set('AWS::EFS::FileSystem', (logicalId, resource, template, pricing) => {
+      const throughputMode = TemplateParser.getPropertyValue(template, resource, 'ThroughputMode', 'bursting') as string;
+      const estimatedStorageGB = 100;
+      const standardPrice = pricing.efs?.standard || 0.30;
+      let storageCost = estimatedStorageGB * standardPrice;
+      const details: CostDetail[] = [{
+        component: 'EFS Standard Storage (est. 100GB)',
+        quantity: estimatedStorageGB,
+        unitPrice: standardPrice,
+        monthlyCost: storageCost,
+        unit: 'GB/month',
+      }];
+      
+      if (throughputMode === 'provisioned') {
+        const provisionedThroughput = TemplateParser.getPropertyValue(template, resource, 'ProvisionedThroughputInMibps', 0) as number;
+        if (provisionedThroughput > 0) {
+          const throughputPrice = pricing.efs?.provisionedThroughput || 6.00;
+          const throughputCost = provisionedThroughput * throughputPrice;
+          storageCost += throughputCost;
+          details.push({
+            component: `Provisioned Throughput (${provisionedThroughput} MiBps)`,
+            quantity: provisionedThroughput,
+            unitPrice: throughputPrice,
+            monthlyCost: throughputCost,
+            unit: 'MiBps/month',
+          });
+        }
+      }
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::EFS::FileSystem',
+        monthlyCost: storageCost,
+        hourlyCost: storageCost / HOURS_PER_MONTH,
+        unit: 'file system',
+        details,
+        confidence: 'low',
+      };
+    });
+    
+    // FSx for Windows
+    calculators.set('AWS::FSx::FileSystem', (logicalId, resource, template, pricing) => {
+      const fileSystemType = TemplateParser.getPropertyValue(template, resource, 'FileSystemType', 'WINDOWS') as string;
+      const storageCapacity = TemplateParser.getPropertyValue(template, resource, 'StorageCapacity', 32) as number;
+      
+      let pricePerGB: number;
+      switch (fileSystemType) {
+        case 'LUSTRE':
+          pricePerGB = pricing.fsx?.lustre || 0.14;
+          break;
+        case 'ONTAP':
+          pricePerGB = pricing.fsx?.ontap || 0.25;
+          break;
+        case 'OPENZFS':
+          pricePerGB = pricing.fsx?.openzfs || 0.09;
+          break;
+        default:
+          pricePerGB = pricing.fsx?.windows || 0.23;
+      }
+      
+      const monthlyCost = storageCapacity * pricePerGB;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::FSx::FileSystem',
+        monthlyCost,
+        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        unit: 'file system',
+        details: [{
+          component: `FSx ${fileSystemType} Storage (${storageCapacity}GB)`,
+          quantity: storageCapacity,
+          unitPrice: pricePerGB,
+          monthlyCost,
+          unit: 'GB/month',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // Backup Vault
+    calculators.set('AWS::Backup::BackupVault', (logicalId, resource, template, pricing) => {
+      // Estimate 100GB storage
+      const estimatedStorageGB = 100;
+      const storagePrice = pricing.backup?.storage || 0.05;
+      const monthlyCost = estimatedStorageGB * storagePrice;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Backup::BackupVault',
+        monthlyCost,
+        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        unit: 'vault',
+        details: [{
+          component: 'AWS Backup Storage (est. 100GB)',
+          quantity: estimatedStorageGB,
+          unitPrice: storagePrice,
+          monthlyCost,
+          unit: 'GB/month',
+        }],
+        confidence: 'low',
+      };
+    });
+    
+    // CloudFront Distribution
+    calculators.set('AWS::CloudFront::Distribution', (logicalId, resource, template, pricing) => {
+      // Estimate 100GB data transfer, 1M requests
+      const estimatedDataGB = 100;
+      const estimatedRequests = 1000000;
+      const dataPrice = pricing.cloudfront?.dataTransfer?.['us'] || 0.085;
+      const requestPrice = pricing.cloudfront?.requests?.https || 0.01;
+      
+      const dataCost = estimatedDataGB * dataPrice;
+      const requestCost = (estimatedRequests / 10000) * requestPrice;
+      const monthlyCost = dataCost + requestCost;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::CloudFront::Distribution',
+        monthlyCost,
+        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        unit: 'distribution',
+        details: [
+          {
+            component: 'CloudFront Data Transfer (est. 100GB)',
+            quantity: estimatedDataGB,
+            unitPrice: dataPrice,
+            monthlyCost: dataCost,
+            unit: 'GB',
+          },
+          {
+            component: 'HTTPS Requests (est. 1M)',
+            quantity: estimatedRequests / 10000,
+            unitPrice: requestPrice,
+            monthlyCost: requestCost,
+            unit: '10k requests',
+          },
+        ],
+        confidence: 'low',
+      };
+    });
+    
+    // ACM PCA Certificate Authority
+    calculators.set('AWS::ACMPCA::CertificateAuthority', (logicalId, resource, template, pricing) => {
+      const monthlyPrice = 400; // $400/month for private CA
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::ACMPCA::CertificateAuthority',
+        monthlyCost: monthlyPrice,
+        hourlyCost: monthlyPrice / HOURS_PER_MONTH,
+        unit: 'certificate authority',
+        details: [{
+          component: 'ACM Private Certificate Authority',
+          quantity: 1,
+          unitPrice: monthlyPrice,
+          monthlyCost: monthlyPrice,
+          unit: 'CA/month',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // Config Rule
+    calculators.set('AWS::Config::ConfigRule', (logicalId, resource, template, pricing) => {
+      const rulePrice = pricing.config?.rules || 1.00;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Config::ConfigRule',
+        monthlyCost: rulePrice,
+        hourlyCost: rulePrice / HOURS_PER_MONTH,
+        unit: 'rule',
+        details: [{
+          component: 'AWS Config Rule',
+          quantity: 1,
+          unitPrice: rulePrice,
+          monthlyCost: rulePrice,
+          unit: 'rule/month',
+        }],
+        confidence: 'medium',
+      };
+    });
+    
+    // CloudTrail
+    calculators.set('AWS::CloudTrail::Trail', (logicalId, resource, template, pricing) => {
+      const isMultiRegion = TemplateParser.getPropertyValue(template, resource, 'IsMultiRegionTrail', false) as boolean;
+      
+      // First trail is free for management events, estimate data events
+      const estimatedDataEvents = 100000;
+      const dataEventPrice = pricing.cloudtrail?.dataEvents || 0.10;
+      const monthlyCost = (estimatedDataEvents / 100000) * dataEventPrice;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::CloudTrail::Trail',
+        monthlyCost,
+        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        unit: 'trail',
+        details: [{
+          component: `CloudTrail${isMultiRegion ? ' (Multi-Region)' : ''} Data Events (est. 100k)`,
+          quantity: estimatedDataEvents,
+          unitPrice: dataEventPrice / 100000,
+          monthlyCost,
+          unit: 'events',
+        }],
+        confidence: 'low',
+      };
+    });
+    
+    // CodeBuild Project
+    calculators.set('AWS::CodeBuild::Project', (logicalId, resource, template, pricing) => {
+      const computeType = TemplateParser.getPropertyValue(template, resource, 'Environment.ComputeType', 'BUILD_GENERAL1_SMALL') as string;
+      const environmentType = TemplateParser.getPropertyValue(template, resource, 'Environment.Type', 'LINUX_CONTAINER') as string;
+      
+      // Estimate 100 build minutes/month
+      const estimatedMinutes = 100;
+      let pricePerMinute: number;
+      
+      if (environmentType === 'ARM_CONTAINER') {
+        pricePerMinute = pricing.codebuild?.armLarge || 0.015;
+      } else if (environmentType === 'LINUX_GPU_CONTAINER') {
+        pricePerMinute = pricing.codebuild?.gpuLarge || 0.18;
+      } else if (environmentType.includes('WINDOWS')) {
+        pricePerMinute = computeType.includes('LARGE') ? (pricing.codebuild?.windowsLarge || 0.04) : (pricing.codebuild?.windowsMedium || 0.02);
+      } else {
+        switch (computeType) {
+          case 'BUILD_GENERAL1_MEDIUM':
+            pricePerMinute = pricing.codebuild?.linuxMedium || 0.01;
+            break;
+          case 'BUILD_GENERAL1_LARGE':
+            pricePerMinute = pricing.codebuild?.linuxLarge || 0.02;
+            break;
+          case 'BUILD_GENERAL1_2XLARGE':
+            pricePerMinute = pricing.codebuild?.linux2xlarge || 0.04;
+            break;
+          default:
+            pricePerMinute = pricing.codebuild?.linuxSmall || 0.005;
+        }
+      }
+      
+      const monthlyCost = estimatedMinutes * pricePerMinute;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::CodeBuild::Project',
+        monthlyCost,
+        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        unit: 'project',
+        details: [{
+          component: `CodeBuild ${computeType} (est. ${estimatedMinutes} min)`,
+          quantity: estimatedMinutes,
+          unitPrice: pricePerMinute,
+          monthlyCost,
+          unit: 'minutes',
+        }],
+        confidence: 'low',
+      };
+    });
+    
+    // Glue Job
+    calculators.set('AWS::Glue::Job', (logicalId, resource, template, pricing) => {
+      // Estimate 10 DPU-hours/month
+      const estimatedDpuHours = 10;
+      const dpuPrice = pricing.glue?.dpuHour || 0.44;
+      const monthlyCost = estimatedDpuHours * dpuPrice;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Glue::Job',
+        monthlyCost,
+        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        unit: 'job',
+        details: [{
+          component: 'Glue Job (est. 10 DPU-hours)',
+          quantity: estimatedDpuHours,
+          unitPrice: dpuPrice,
+          monthlyCost,
+          unit: 'DPU-hours',
+        }],
+        confidence: 'low',
+      };
+    });
+    
+    // Glue Crawler
+    calculators.set('AWS::Glue::Crawler', (logicalId, resource, template, pricing) => {
+      // Estimate 5 DPU-hours/month
+      const estimatedDpuHours = 5;
+      const dpuPrice = pricing.glue?.crawlerDpuHour || 0.44;
+      const monthlyCost = estimatedDpuHours * dpuPrice;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Glue::Crawler',
+        monthlyCost,
+        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        unit: 'crawler',
+        details: [{
+          component: 'Glue Crawler (est. 5 DPU-hours)',
+          quantity: estimatedDpuHours,
+          unitPrice: dpuPrice,
+          monthlyCost,
+          unit: 'DPU-hours',
+        }],
+        confidence: 'low',
+      };
+    });
+    
+    // WAFv2 WebACL
+    calculators.set('AWS::WAFv2::WebACL', (logicalId, resource, template, pricing) => {
+      const rules = resource.Properties?.Rules as unknown[] || [];
+      const ruleCount = rules.length;
+      
+      const webAclPrice = pricing.waf?.webACL || 5.00;
+      const rulePrice = pricing.waf?.rule || 1.00;
+      const monthlyCost = webAclPrice + (ruleCount * rulePrice);
+      
+      const details: CostDetail[] = [{
+        component: 'Web ACL',
+        quantity: 1,
+        unitPrice: webAclPrice,
+        monthlyCost: webAclPrice,
+        unit: 'ACL/month',
+      }];
+      
+      if (ruleCount > 0) {
+        details.push({
+          component: `Rules (${ruleCount})`,
+          quantity: ruleCount,
+          unitPrice: rulePrice,
+          monthlyCost: ruleCount * rulePrice,
+          unit: 'rules/month',
+        });
+      }
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::WAFv2::WebACL',
+        monthlyCost,
+        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        unit: 'web ACL',
+        details,
+        confidence: 'medium',
+      };
+    });
+    
+    // WAF (v1) WebACL
+    calculators.set('AWS::WAF::WebACL', (logicalId, resource, template, pricing) => {
+      const webAclPrice = pricing.waf?.webACL || 5.00;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::WAF::WebACL',
+        monthlyCost: webAclPrice,
+        hourlyCost: webAclPrice / HOURS_PER_MONTH,
+        unit: 'web ACL',
+        details: [{
+          component: 'WAF Web ACL',
+          quantity: 1,
+          unitPrice: webAclPrice,
+          monthlyCost: webAclPrice,
+          unit: 'ACL/month',
+        }],
+        confidence: 'medium',
+      };
+    });
+    
+    // OpenSearch Domain
+    calculators.set('AWS::OpenSearchService::Domain', (logicalId, resource, template, pricing) => {
+      const instanceType = TemplateParser.getPropertyValue(template, resource, 'ClusterConfig.InstanceType', 't3.small.search') as string;
+      const instanceCount = TemplateParser.getPropertyValue(template, resource, 'ClusterConfig.InstanceCount', 1) as number;
+      const hourlyPrice = pricing.opensearch?.instances?.[instanceType] || pricing.opensearch?.instances?.['t3.small.search'] || 0.036;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH * instanceCount;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::OpenSearchService::Domain',
+        monthlyCost,
+        hourlyCost: hourlyPrice * instanceCount,
+        unit: 'domain',
+        details: [{
+          component: `OpenSearch ${instanceType} (${instanceCount} instances)`,
+          quantity: instanceCount * HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'instance-hours',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // Elasticsearch Domain (legacy)
+    calculators.set('AWS::Elasticsearch::Domain', (logicalId, resource, template, pricing) => {
+      const instanceType = TemplateParser.getPropertyValue(template, resource, 'ElasticsearchClusterConfig.InstanceType', 't3.small.elasticsearch') as string;
+      const instanceCount = TemplateParser.getPropertyValue(template, resource, 'ElasticsearchClusterConfig.InstanceCount', 1) as number;
+      const hourlyPrice = pricing.elasticsearch?.instances?.[instanceType] || pricing.opensearch?.instances?.['t3.small.search'] || 0.036;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH * instanceCount;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Elasticsearch::Domain',
+        monthlyCost,
+        hourlyCost: hourlyPrice * instanceCount,
+        unit: 'domain',
+        details: [{
+          component: `Elasticsearch ${instanceType} (${instanceCount} instances)`,
+          quantity: instanceCount * HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'instance-hours',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // Lightsail Instance
+    calculators.set('AWS::Lightsail::Instance', (logicalId, resource, template, pricing) => {
+      const bundleId = TemplateParser.getPropertyValue(template, resource, 'BundleId', 'nano_2_0') as string;
+      
+      let monthlyPrice = 3.50;
+      if (bundleId.includes('micro')) monthlyPrice = pricing.lightsail?.instances?.['micro'] || 5.00;
+      else if (bundleId.includes('small')) monthlyPrice = pricing.lightsail?.instances?.['small'] || 10.00;
+      else if (bundleId.includes('medium')) monthlyPrice = pricing.lightsail?.instances?.['medium'] || 20.00;
+      else if (bundleId.includes('large')) monthlyPrice = 40.00;
+      else if (bundleId.includes('xlarge')) monthlyPrice = 80.00;
+      else monthlyPrice = pricing.lightsail?.instances?.['nano'] || 3.50;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Lightsail::Instance',
+        monthlyCost: monthlyPrice,
+        hourlyCost: monthlyPrice / HOURS_PER_MONTH,
+        unit: 'instance',
+        details: [{
+          component: `Lightsail ${bundleId}`,
+          quantity: 1,
+          unitPrice: monthlyPrice,
+          monthlyCost: monthlyPrice,
+          unit: 'instance/month',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // DMS Replication Instance
+    calculators.set('AWS::DMS::ReplicationInstance', (logicalId, resource, template, pricing) => {
+      const instanceClass = TemplateParser.getPropertyValue(template, resource, 'ReplicationInstanceClass', 'dms.t3.micro') as string;
+      const hourlyPrice = pricing.dms?.instances?.[instanceClass] || pricing.dms?.instances?.['dms.t3.micro'] || 0.018;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::DMS::ReplicationInstance',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'instance',
+        details: [{
+          component: `DMS ${instanceClass}`,
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // Transfer Family Server
+    calculators.set('AWS::Transfer::Server', (logicalId, resource, template, pricing) => {
+      const hourlyPrice = pricing.transferFamily?.protocols || 0.30;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Transfer::Server',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'server',
+        details: [{
+          component: 'AWS Transfer Family Server',
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'medium',
+      };
+    });
+    
+    // CodePipeline
+    calculators.set('AWS::CodePipeline::Pipeline', (logicalId, resource, template, pricing) => {
+      const pipelinePrice = pricing.codepipeline?.activePipeline || 1.00;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::CodePipeline::Pipeline',
+        monthlyCost: pipelinePrice,
+        hourlyCost: pipelinePrice / HOURS_PER_MONTH,
+        unit: 'pipeline',
+        details: [{
+          component: 'CodePipeline Active Pipeline',
+          quantity: 1,
+          unitPrice: pipelinePrice,
+          monthlyCost: pipelinePrice,
+          unit: 'pipeline/month',
+        }],
+        confidence: 'high',
+      };
+    });
+    
+    // Network Firewall
+    calculators.set('AWS::NetworkFirewall::Firewall', (logicalId, resource, template, pricing) => {
+      // $0.395/hour per endpoint + data processing
+      const endpointHourly = 0.395;
+      const subnetMappings = resource.Properties?.SubnetMappings as unknown[] || [{}];
+      const endpointCount = subnetMappings.length;
+      const baseCost = endpointHourly * HOURS_PER_MONTH * endpointCount;
+      
+      // Estimate 100GB data processed
+      const estimatedDataGB = 100;
+      const dataPrice = 0.065;
+      const dataCost = estimatedDataGB * dataPrice;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::NetworkFirewall::Firewall',
+        monthlyCost: baseCost + dataCost,
+        hourlyCost: endpointHourly * endpointCount,
+        unit: 'firewall',
+        details: [
+          {
+            component: `Network Firewall Endpoints (${endpointCount})`,
+            quantity: endpointCount * HOURS_PER_MONTH,
+            unitPrice: endpointHourly,
+            monthlyCost: baseCost,
+            unit: 'endpoint-hours',
+          },
+          {
+            component: 'Data Processing (est. 100GB)',
+            quantity: estimatedDataGB,
+            unitPrice: dataPrice,
+            monthlyCost: dataCost,
+            unit: 'GB',
+          },
+        ],
+        confidence: 'medium',
+      };
+    });
+    
+    // Grafana Workspace
+    calculators.set('AWS::Grafana::Workspace', (logicalId, resource, template, pricing) => {
+      // $9/editor/month + $5/viewer/month, estimate 2 editors
+      const editorPrice = 9.00;
+      const estimatedEditors = 2;
+      const monthlyCost = editorPrice * estimatedEditors;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Grafana::Workspace',
+        monthlyCost,
+        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        unit: 'workspace',
+        details: [{
+          component: 'Managed Grafana Editors (est. 2)',
+          quantity: estimatedEditors,
+          unitPrice: editorPrice,
+          monthlyCost,
+          unit: 'editors/month',
+        }],
+        confidence: 'low',
+      };
+    });
+    
+    // SageMaker Notebook Instance
+    calculators.set('AWS::SageMaker::NotebookInstance', (logicalId, resource, template, pricing) => {
+      const instanceType = TemplateParser.getPropertyValue(template, resource, 'InstanceType', 'ml.t3.medium') as string;
+      const hourlyPrice = pricing.sagemaker?.notebookInstances?.[instanceType] || 0.05;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::SageMaker::NotebookInstance',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'notebook instance',
+        details: [{
+          component: `SageMaker Notebook ${instanceType}`,
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
         }],
         confidence: 'medium',
       };
@@ -742,9 +1752,13 @@ export class CostCalculator {
     const estimatedInvocations = 100000;
     const avgDurationMs = timeout * 500; // Half of timeout in ms
     
+    const requestPrice = this.pricing.lambda.requests || 0.20;
+    const durationPrice = this.pricing.lambda.duration || 0.0000166667;
+    const freeDuration = 400000; // GB-seconds free tier
+    
     const gbSeconds = (memorySize / 1024) * (avgDurationMs / 1000) * estimatedInvocations;
-    const requestCost = (estimatedInvocations / 1000000) * this.pricing.lambda.requestPrice;
-    const computeCost = Math.max(0, gbSeconds - this.pricing.lambda.freeDuration) * this.pricing.lambda.durationPrice;
+    const requestCost = (estimatedInvocations / 1000000) * requestPrice;
+    const computeCost = Math.max(0, gbSeconds - freeDuration) * durationPrice;
     
     return {
       resourceId: logicalId,
@@ -756,14 +1770,14 @@ export class CostCalculator {
         {
           component: `Lambda Requests (est. ${estimatedInvocations.toLocaleString()}/mo)`,
           quantity: estimatedInvocations,
-          unitPrice: this.pricing.lambda.requestPrice / 1000000,
+          unitPrice: requestPrice / 1000000,
           monthlyCost: requestCost,
           unit: 'requests',
         },
         {
           component: `Lambda Compute (${memorySize}MB, ${avgDurationMs}ms avg)`,
           quantity: gbSeconds,
-          unitPrice: this.pricing.lambda.durationPrice,
+          unitPrice: durationPrice,
           monthlyCost: computeCost,
           unit: 'GB-seconds',
         },
@@ -781,14 +1795,21 @@ export class CostCalculator {
     template: CloudFormationTemplate
   ): ResourceCost {
     const billingMode = TemplateParser.getPropertyValue(template, resource, 'BillingMode', 'PROVISIONED') as string;
+    const dynamo = this.pricing.other?.dynamodb || {
+      readCapacity: 0.00013,
+      writeCapacity: 0.00065,
+      onDemandRead: 0.25,
+      onDemandWrite: 1.25,
+      storage: 0.25,
+    };
     
     if (billingMode === 'PAY_PER_REQUEST') {
       // On-demand - estimate based on usage
       const estimatedWrites = 1000000; // 1M writes/month
       const estimatedReads = 5000000; // 5M reads/month
       
-      const writeCost = (estimatedWrites / 1000000) * this.pricing.dynamodb.onDemandWrite;
-      const readCost = (estimatedReads / 1000000) * this.pricing.dynamodb.onDemandRead;
+      const writeCost = (estimatedWrites / 1000000) * dynamo.onDemandWrite;
+      const readCost = (estimatedReads / 1000000) * dynamo.onDemandRead;
       
       return {
         resourceId: logicalId,
@@ -800,14 +1821,14 @@ export class CostCalculator {
           {
             component: 'DynamoDB On-Demand Writes (est. 1M/mo)',
             quantity: estimatedWrites,
-            unitPrice: this.pricing.dynamodb.onDemandWrite / 1000000,
+            unitPrice: dynamo.onDemandWrite / 1000000,
             monthlyCost: writeCost,
             unit: 'writes',
           },
           {
             component: 'DynamoDB On-Demand Reads (est. 5M/mo)',
             quantity: estimatedReads,
-            unitPrice: this.pricing.dynamodb.onDemandRead / 1000000,
+            unitPrice: dynamo.onDemandRead / 1000000,
             monthlyCost: readCost,
             unit: 'reads',
           },
@@ -821,8 +1842,9 @@ export class CostCalculator {
     const readCapacity = (throughput?.ReadCapacityUnits as number) || 5;
     const writeCapacity = (throughput?.WriteCapacityUnits as number) || 5;
     
-    const readCost = readCapacity * this.pricing.dynamodb.readCapacityUnit;
-    const writeCost = writeCapacity * this.pricing.dynamodb.writeCapacityUnit;
+    // Provisioned pricing is per hour, multiply by hours per month
+    const readCost = readCapacity * dynamo.readCapacity * HOURS_PER_MONTH;
+    const writeCost = writeCapacity * dynamo.writeCapacity * HOURS_PER_MONTH;
     
     return {
       resourceId: logicalId,
@@ -834,14 +1856,14 @@ export class CostCalculator {
         {
           component: `DynamoDB Read Capacity (${readCapacity} RCU)`,
           quantity: readCapacity,
-          unitPrice: this.pricing.dynamodb.readCapacityUnit,
+          unitPrice: dynamo.readCapacity * HOURS_PER_MONTH,
           monthlyCost: readCost,
           unit: 'RCU/month',
         },
         {
           component: `DynamoDB Write Capacity (${writeCapacity} WCU)`,
           quantity: writeCapacity,
-          unitPrice: this.pricing.dynamodb.writeCapacityUnit,
+          unitPrice: dynamo.writeCapacity * HOURS_PER_MONTH,
           monthlyCost: writeCost,
           unit: 'WCU/month',
         },
@@ -858,9 +1880,11 @@ export class CostCalculator {
     resource: CloudFormationResource,
     template: CloudFormationTemplate
   ): ResourceCost {
+    const s3Pricing = this.pricing.other?.s3 || { standardStorage: 0.023 };
+    
     // Estimate 100GB storage
     const estimatedStorageGB = 100;
-    const storageCost = estimatedStorageGB * this.pricing.s3.storage;
+    const storageCost = estimatedStorageGB * s3Pricing.standardStorage;
     
     return {
       resourceId: logicalId,
@@ -871,7 +1895,7 @@ export class CostCalculator {
       details: [{
         component: 'S3 Storage (est. 100GB)',
         quantity: estimatedStorageGB,
-        unitPrice: this.pricing.s3.storage,
+        unitPrice: s3Pricing.standardStorage,
         monthlyCost: storageCost,
         unit: 'GB/month',
       }],
@@ -887,9 +1911,14 @@ export class CostCalculator {
     resource: CloudFormationResource,
     template: CloudFormationTemplate
   ): ResourceCost {
+    const sqsPricing = this.pricing.other?.sqs || { standard: 0.40, fifo: 0.50 };
+    const isFifo = (resource.Properties?.QueueName as string)?.endsWith('.fifo') || 
+                   resource.Properties?.FifoQueue === true;
+    
     // Estimate 1M requests/month
     const estimatedRequests = 1000000;
-    const requestCost = (estimatedRequests / 1000000) * this.pricing.sqs.requestsPerMillion;
+    const pricePerMillion = isFifo ? sqsPricing.fifo : sqsPricing.standard;
+    const requestCost = (estimatedRequests / 1000000) * pricePerMillion;
     
     return {
       resourceId: logicalId,
@@ -898,9 +1927,9 @@ export class CostCalculator {
       hourlyCost: requestCost / HOURS_PER_MONTH,
       unit: 'queue',
       details: [{
-        component: 'SQS Requests (est. 1M/mo)',
+        component: `SQS ${isFifo ? 'FIFO' : 'Standard'} Requests (est. 1M/mo)`,
         quantity: estimatedRequests,
-        unitPrice: this.pricing.sqs.requestsPerMillion / 1000000,
+        unitPrice: pricePerMillion / 1000000,
         monthlyCost: requestCost,
         unit: 'requests',
       }],
@@ -916,13 +1945,11 @@ export class CostCalculator {
     resource: CloudFormationResource,
     template: CloudFormationTemplate
   ): ResourceCost {
+    const apiPricing = this.pricing.other?.apiGateway || { rest: 3.50, http: 1.00, websocket: 1.00 };
     const isHttpApi = resource.Type === 'AWS::ApiGatewayV2::Api';
     const estimatedRequests = 1000000; // 1M requests/month
     
-    const pricePerMillion = isHttpApi 
-      ? this.pricing.apiGateway.httpApiPerMillion 
-      : this.pricing.apiGateway.restApiPerMillion;
-    
+    const pricePerMillion = isHttpApi ? apiPricing.http : apiPricing.rest;
     const requestCost = (estimatedRequests / 1000000) * pricePerMillion;
     
     return {
@@ -950,6 +1977,7 @@ export class CostCalculator {
     resource: CloudFormationResource,
     template: CloudFormationTemplate
   ): ResourceCost {
+    const sfPricing = this.pricing.other?.stepFunctions || { standard: 25.00, express: 1.00 };
     const type = TemplateParser.getPropertyValue(template, resource, 'StateMachineType', 'STANDARD') as string;
     
     // Estimate 10,000 executions/month with 5 transitions each
@@ -957,10 +1985,7 @@ export class CostCalculator {
     const transitionsPerExecution = 5;
     const totalTransitions = estimatedExecutions * transitionsPerExecution;
     
-    const pricePerMillion = type === 'EXPRESS' 
-      ? this.pricing.stepFunctions.expressPerMillion 
-      : this.pricing.stepFunctions.standardTransitionsPerMillion;
-    
+    const pricePerMillion = type === 'EXPRESS' ? sfPricing.express : sfPricing.standard;
     const cost = (totalTransitions / 1000000) * pricePerMillion;
     
     return {
@@ -975,6 +2000,167 @@ export class CostCalculator {
         unitPrice: pricePerMillion / 1000000,
         monthlyCost: cost,
         unit: 'transitions',
+      }],
+      confidence: 'low',
+    };
+  }
+  
+  /**
+   * Calculate SNS Topic cost
+   */
+  private calculateSNSCost(
+    logicalId: string,
+    resource: CloudFormationResource,
+    template: CloudFormationTemplate
+  ): ResourceCost {
+    const snsPricing = this.pricing.other?.sns || { publish: 0.50 };
+    
+    // Estimate 1M publishes/month
+    const estimatedPublishes = 1000000;
+    const publishCost = (estimatedPublishes / 1000000) * snsPricing.publish;
+    
+    return {
+      resourceId: logicalId,
+      resourceType: 'AWS::SNS::Topic',
+      monthlyCost: publishCost,
+      hourlyCost: publishCost / HOURS_PER_MONTH,
+      unit: 'topic',
+      details: [{
+        component: 'SNS Publishes (est. 1M/mo)',
+        quantity: estimatedPublishes,
+        unitPrice: snsPricing.publish / 1000000,
+        monthlyCost: publishCost,
+        unit: 'publishes',
+      }],
+      confidence: 'low',
+    };
+  }
+  
+  /**
+   * Calculate CloudWatch Logs cost
+   */
+  private calculateCloudWatchLogsCost(
+    logicalId: string,
+    resource: CloudFormationResource,
+    template: CloudFormationTemplate
+  ): ResourceCost {
+    const cwPricing = this.pricing.other?.cloudwatch || { logsIngestion: 0.50, logsStorage: 0.03 };
+    
+    // Estimate 10GB/month ingestion, 50GB storage
+    const estimatedIngestionGB = 10;
+    const estimatedStorageGB = 50;
+    
+    const ingestionCost = estimatedIngestionGB * cwPricing.logsIngestion;
+    const storageCost = estimatedStorageGB * cwPricing.logsStorage;
+    const totalCost = ingestionCost + storageCost;
+    
+    return {
+      resourceId: logicalId,
+      resourceType: 'AWS::Logs::LogGroup',
+      monthlyCost: totalCost,
+      hourlyCost: totalCost / HOURS_PER_MONTH,
+      unit: 'log group',
+      details: [
+        {
+          component: 'Log Data Ingestion (est. 10GB/mo)',
+          quantity: estimatedIngestionGB,
+          unitPrice: cwPricing.logsIngestion,
+          monthlyCost: ingestionCost,
+          unit: 'GB',
+        },
+        {
+          component: 'Log Storage (est. 50GB)',
+          quantity: estimatedStorageGB,
+          unitPrice: cwPricing.logsStorage,
+          monthlyCost: storageCost,
+          unit: 'GB',
+        },
+      ],
+      confidence: 'low',
+    };
+  }
+  
+  /**
+   * Calculate SSM Parameter cost
+   */
+  private calculateSSMParameterCost(
+    logicalId: string,
+    resource: CloudFormationResource,
+    template: CloudFormationTemplate
+  ): ResourceCost {
+    const tier = TemplateParser.getPropertyValue(template, resource, 'Tier', 'Standard') as string;
+    
+    // Standard parameters: first 10,000 free, then $0.05 per parameter/month
+    // Advanced parameters: $0.05 per parameter/month
+    const isAdvanced = tier === 'Advanced';
+    
+    // Estimate 10,000 API calls/month
+    const estimatedApiCalls = 10000;
+    const apiCallCost = (estimatedApiCalls / 10000) * 0.05; // $0.05 per 10,000 API calls
+    
+    // Parameter storage cost
+    let parameterCost = 0;
+    if (isAdvanced) {
+      parameterCost = 0.05; // $0.05/month for Advanced tier
+    }
+    
+    const totalCost = apiCallCost + parameterCost;
+    
+    const details: CostDetail[] = [];
+    if (parameterCost > 0) {
+      details.push({
+        component: 'Advanced Parameter Storage',
+        quantity: 1,
+        unitPrice: parameterCost,
+        monthlyCost: parameterCost,
+        unit: 'parameter/month',
+      });
+    }
+    details.push({
+      component: 'API Calls (est. 10k/mo)',
+      quantity: estimatedApiCalls,
+      unitPrice: 0.05 / 10000,
+      monthlyCost: apiCallCost,
+      unit: 'calls',
+    });
+    
+    return {
+      resourceId: logicalId,
+      resourceType: 'AWS::SSM::Parameter',
+      monthlyCost: totalCost,
+      hourlyCost: totalCost / HOURS_PER_MONTH,
+      unit: 'parameter',
+      details,
+      confidence: 'low',
+    };
+  }
+  
+  /**
+   * Calculate ECR Repository cost
+   */
+  private calculateECRCost(
+    logicalId: string,
+    resource: CloudFormationResource,
+    template: CloudFormationTemplate
+  ): ResourceCost {
+    const ecrPricing = this.pricing.other?.ecr || { storage: 0.10 };
+    
+    // Estimate 10GB storage
+    const estimatedStorageGB = 10;
+    const storageCost = estimatedStorageGB * ecrPricing.storage;
+    
+    return {
+      resourceId: logicalId,
+      resourceType: 'AWS::ECR::Repository',
+      monthlyCost: storageCost,
+      hourlyCost: storageCost / HOURS_PER_MONTH,
+      unit: 'repository',
+      details: [{
+        component: 'ECR Storage (est. 10GB)',
+        quantity: estimatedStorageGB,
+        unitPrice: ecrPricing.storage,
+        monthlyCost: storageCost,
+        unit: 'GB/month',
       }],
       confidence: 'low',
     };
