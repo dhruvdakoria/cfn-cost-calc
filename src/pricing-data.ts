@@ -19,6 +19,7 @@ export interface AWSpricingData {
   // Compute
   ec2: {
     instances: Record<string, number>;
+    hosts: Record<string, number>;
   };
   ebs: {
     volumes: Record<string, number>;
@@ -84,10 +85,18 @@ export interface AWSpricingData {
   vpnConnection: {
     hourly: number;
     transitGatewayAttachment: number;
+    clientVpn: {
+      endpointHourly: number;
+      connectionHourly: number;
+    };
   };
   transitGateway: {
     hourly: number;
     dataProcessed: number;
+    peering: number;
+  };
+  trafficMirror: {
+    sessionHourly: number;
   };
   directConnect: {
     portHours: Record<string, number>;
@@ -101,6 +110,8 @@ export interface AWSpricingData {
   // Containers & Orchestration
   eks: {
     clusterHourly: number;
+    fargateVcpuHourly?: number;
+    fargateMemoryGBHourly?: number;
   };
   ecs: {
     fargateVcpuHourly: number;
@@ -216,7 +227,41 @@ export interface AWSpricingData {
     storage: number;
   };
   
+  // Directory Service
+  directoryService: {
+    simpleAD: {
+      small: number;
+      large: number;
+    };
+    microsoftAD: {
+      standard: number;
+      enterprise: number;
+    };
+  };
+  
+  // MWAA
+  mwaa: {
+    environment: Record<string, number>; // mw1.small, medium, large
+  };
+  
+  // Kinesis Analytics
+  kinesisAnalytics: {
+    kpuHourly: number;
+    storage: number;
+  };
+  
   // Security & Identity
+  ssm: {
+    parameter: {
+      standard: number;
+      advanced: number;
+      apiCalls: number;
+    };
+    activation: {
+      standard: number;
+      advanced: number;
+    };
+  };
   secretsManager: {
     secret: number;
     apiCalls: number;
@@ -451,6 +496,11 @@ const DEFAULT_PRICING: AWSpricingData = {
       'c5.large': 0.085, 'c5.xlarge': 0.17, 'c6i.large': 0.085,
       'r5.large': 0.126, 'r5.xlarge': 0.252,
     },
+    hosts: {
+      'm5.large': 0.106, // ~10% markup
+      'c5.large': 0.094,
+      'r5.large': 0.139,
+    },
   },
   
   // EBS
@@ -542,12 +592,22 @@ const DEFAULT_PRICING: AWSpricingData = {
   vpnConnection: {
     hourly: 0.05,
     transitGatewayAttachment: 0.05,
+    clientVpn: {
+      endpointHourly: 0.05,
+      connectionHourly: 0.05,
+    },
   },
   
   // Transit Gateway
   transitGateway: {
     hourly: 0.05,
     dataProcessed: 0.02,
+    peering: 0.05,
+  },
+
+  // Traffic Mirror
+  trafficMirror: {
+    sessionHourly: 0.15,
   },
   
   // Direct Connect
@@ -694,6 +754,40 @@ const DEFAULT_PRICING: AWSpricingData = {
   msk: {
     instanceHourly: { 'kafka.t3.small': 0.072, 'kafka.m5.large': 0.21 },
     storage: 0.10,
+  },
+  
+  // Directory Service
+  directoryService: {
+    simpleAD: { small: 0.05, large: 0.15 },
+    microsoftAD: { standard: 0.12, enterprise: 0.40 },
+  },
+  
+  // MWAA
+  mwaa: {
+    environment: { 
+      'mw1.small': 0.49, 
+      'mw1.medium': 0.99, 
+      'mw1.large': 1.99 
+    },
+  },
+  
+  // Kinesis Analytics
+  kinesisAnalytics: {
+    kpuHourly: 0.11,
+    storage: 0.10,
+  },
+
+  // SSM
+  ssm: {
+    parameter: {
+      standard: 0,
+      advanced: 0.05,
+      apiCalls: 0.05,
+    },
+    activation: {
+      standard: 0,
+      advanced: 0.00695,
+    },
   },
   
   // Secrets Manager
@@ -936,6 +1030,16 @@ function applyRegionalMultiplier(pricing: AWSpricingData, multiplier: number): A
   
   applyToRecord(result.opensearch.instances);
   applyToRecord(result.documentdb.instances);
+
+  result.directoryService.simpleAD.small *= multiplier;
+  result.directoryService.simpleAD.large *= multiplier;
+  result.directoryService.microsoftAD.standard *= multiplier;
+  result.directoryService.microsoftAD.enterprise *= multiplier;
+  
+  applyToRecord(result.mwaa.environment);
+  
+  result.kinesisAnalytics.kpuHourly *= multiplier;
+  result.kinesisAnalytics.storage *= multiplier;
   
   return result;
 }
@@ -1488,6 +1592,7 @@ export const USAGE_BASED_RESOURCES = new Set([
   'AWS::WAFv2::WebACL',
   'AWS::WAF::WebACL',
   'AWS::SSM::Parameter', // Has costs for parameter storage and API calls
+  'AWS::Route53::RecordSet',
 ]);
 
 /**

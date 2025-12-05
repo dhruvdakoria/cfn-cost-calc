@@ -1,0 +1,56 @@
+- name: 💰 Cost Estimate
+id: cost-estimate
+if: ${{ contains(fromJson(steps.workflow-init-setup.outputs.labels), 'enable-cost-calculator') && !contains(fromJson(steps.workflow-init-setup.outputs.labels), 'delete-stack') }}
+uses: ./compliance/.github/actions/cfn-cost-estimate
+with:
+    cdk-out: application/infra/cdk.out
+    region: ${{ env.TargetAccountRegion }}
+    format: github
+    output: application/infra/cost-estimate.md
+          
+- name: 💬 Post Cost Estimate Comment
+if: ${{ contains(fromJson(steps.workflow-init-setup.outputs.labels), 'enable-cost-calculator') && !contains(fromJson(steps.workflow-init-setup.outputs.labels), 'delete-stack') && steps.workflow-init-setup.outputs.pr_number }}
+uses: BMO-Sandbox/actions-github-script@v6.4.1
+env:
+    COST_ESTIMATE_PATH: ${{ steps.cost-estimate.outputs.cost-estimate-path }}
+with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    script: |
+    const fs = require("fs").promises;
+    const path = process.env.COST_ESTIMATE_PATH;
+    
+    try {
+        if (require("fs").existsSync(path)) {
+        const output = await fs.readFile(path, "utf8");
+        
+        // Find existing comment to update or create new
+        const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: ${{ steps.workflow-init-setup.outputs.pr_number }},
+        });
+        
+        const existing = comments.find(c => c.body.includes('CloudFormation Cost Estimate'));
+        
+        if (existing) {
+            await github.rest.issues.updateComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            comment_id: existing.id,
+            body: output,
+            });
+        } else {
+            await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: ${{ steps.workflow-init-setup.outputs.pr_number }},
+            body: output,
+            });
+        }
+        } else {
+            console.log("Cost estimate file not found, skipping comment.");
+        }
+    } catch (error) {
+        console.log("Error posting cost estimate comment: " + error);
+        // Do not fail the build if cost estimate fails
+    }

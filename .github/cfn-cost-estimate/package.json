@@ -1,0 +1,45 @@
+{
+  "name": "cfn-cost-estimate",
+  "version": "1.0.0",
+  "description": "CloudFormation/CDK cost estimation tool - compare deployed vs synthesized stack costs",
+  "main": "dist/index.js",
+  "bin": {
+    "cfn-cost": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "dev": "ts-node src/cli.ts",
+    "lint": "eslint src/**/*.ts",
+    "test": "jest",
+    "prepublishOnly": "npm run build",
+    "update-pricing": "ts-node scripts/fetch-infracost-pricing.ts"
+  },
+  "keywords": [
+    "cloudformation",
+    "cdk",
+    "aws",
+    "cost",
+    "estimation",
+    "infracost"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-cloudformation": "^3.679.0",
+    "@aws-sdk/client-pricing": "^3.679.0",
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.5",
+    "commander": "^12.1.0",
+    "glob": "^11.0.0",
+    "yaml": "^2.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

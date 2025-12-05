@@ -140,6 +140,8 @@ export class CostCalculator {
         return this.calculateSSMParameterCost(logicalId, resource, template);
       case 'AWS::ECR::Repository':
         return this.calculateECRCost(logicalId, resource, template);
+      case 'AWS::Route53::RecordSet':
+        return this.calculateRoute53RecordSetCost(logicalId, resource, template);
       default:
         return null;
     }
@@ -1734,6 +1736,422 @@ export class CostCalculator {
       };
     });
     
+    // Directory Service - Simple AD
+    calculators.set('AWS::DirectoryService::SimpleAD', (logicalId, resource, template, pricing) => {
+      const size = TemplateParser.getPropertyValue(template, resource, 'Size', 'Small') as string;
+      const sizeLower = size.toLowerCase();
+      const simpleADPricing = pricing.directoryService?.simpleAD as Record<string, number> | undefined;
+      
+      const hourlyPrice = simpleADPricing?.[sizeLower] || 
+                          (sizeLower === 'large' ? 0.15 : 0.05);
+      
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::DirectoryService::SimpleAD',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'directory',
+        details: [{
+          component: `Simple AD (${size})`,
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'high',
+      };
+    });
+
+    // Directory Service - Microsoft AD
+    calculators.set('AWS::DirectoryService::MicrosoftAD', (logicalId, resource, template, pricing) => {
+      const edition = TemplateParser.getPropertyValue(template, resource, 'Edition', 'Standard') as string;
+      const editionLower = edition.toLowerCase();
+      const msADPricing = pricing.directoryService?.microsoftAD as Record<string, number> | undefined;
+      
+      const hourlyPrice = msADPricing?.[editionLower] || 
+                          (editionLower === 'enterprise' ? 0.40 : 0.12);
+      
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::DirectoryService::MicrosoftAD',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'directory',
+        details: [{
+          component: `Microsoft AD (${edition})`,
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'high',
+      };
+    });
+
+    // MWAA Environment
+    calculators.set('AWS::MWAA::Environment', (logicalId, resource, template, pricing) => {
+      const environmentClass = TemplateParser.getPropertyValue(template, resource, 'EnvironmentClass', 'mw1.small') as string;
+      
+      const hourlyPrice = pricing.mwaa?.environment?.[environmentClass] || 0.49;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::MWAA::Environment',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'environment',
+        details: [{
+          component: `MWAA Environment (${environmentClass})`,
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'high',
+      };
+    });
+
+    // Kinesis Analytics V2
+    calculators.set('AWS::KinesisAnalyticsV2::Application', (logicalId, resource, template, pricing) => {
+      // Base cost: 1 KPU per hour for orchestration (Infracost says 2 KPUs for Studio, 1 for App?)
+      // Assuming 1 KPU baseline for running application
+      const kpuHourly = pricing.kinesisAnalytics?.kpuHourly || 0.11;
+      const runningKpus = 1; 
+      const monthlyCost = kpuHourly * runningKpus * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::KinesisAnalyticsV2::Application',
+        monthlyCost,
+        hourlyCost: kpuHourly * runningKpus,
+        unit: 'application',
+        details: [{
+          component: 'Kinesis Analytics Application (1 KPU est.)',
+          quantity: HOURS_PER_MONTH,
+          unitPrice: kpuHourly,
+          monthlyCost,
+          unit: 'KPU-hours',
+        }],
+        confidence: 'low',
+      };
+    });
+
+    // CloudFront Function
+    calculators.set('AWS::CloudFront::Function', (logicalId, resource, template, pricing) => {
+      // Estimate 2M invocations/month
+      const estimatedInvocations = 2000000;
+      const pricePerMillion = pricing.cloudfront?.functions || 0.10;
+      const monthlyCost = (estimatedInvocations / 1000000) * pricePerMillion;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::CloudFront::Function',
+        monthlyCost,
+        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        unit: 'function',
+        details: [{
+          component: 'CloudFront Function Invocations (est. 2M/mo)',
+          quantity: estimatedInvocations,
+          unitPrice: pricePerMillion / 1000000,
+          monthlyCost,
+          unit: 'invocations',
+        }],
+        confidence: 'low',
+      };
+    });
+
+    // Route 53 Resolver Endpoint
+    calculators.set('AWS::Route53Resolver::ResolverEndpoint', (logicalId, resource, template, pricing) => {
+      const ipAddresses = TemplateParser.getPropertyValue(template, resource, 'IpAddresses', []) as unknown[];
+      const eniCount = Math.max(ipAddresses.length, 2); // Minimum 2 for high availability usually
+      
+      const hourlyPrice = pricing.route53?.resolverEndpoint || 0.125;
+      const monthlyCost = hourlyPrice * eniCount * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Route53Resolver::ResolverEndpoint',
+        monthlyCost,
+        hourlyCost: hourlyPrice * eniCount,
+        unit: 'endpoint',
+        details: [{
+          component: `Resolver Endpoint ENIs (${eniCount})`,
+          quantity: eniCount * HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'ENI-hours',
+        }],
+        confidence: 'medium',
+      };
+    });
+
+    // Route 53 Health Check
+    calculators.set('AWS::Route53::HealthCheck', (logicalId, resource, template, pricing) => {
+      // Assume basic health check
+      const monthlyPrice = pricing.route53?.healthChecks?.basic || 0.50;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Route53::HealthCheck',
+        monthlyCost: monthlyPrice,
+        hourlyCost: monthlyPrice / HOURS_PER_MONTH,
+        unit: 'health check',
+        details: [{
+          component: 'Route 53 Health Check (Basic)',
+          quantity: 1,
+          unitPrice: monthlyPrice,
+          monthlyCost: monthlyPrice,
+          unit: 'check/month',
+        }],
+        confidence: 'medium',
+      };
+    });
+
+    // EC2 Client VPN Endpoint
+    calculators.set('AWS::EC2::ClientVpnEndpoint', (logicalId, resource, template, pricing) => {
+      const hourlyPrice = pricing.vpnConnection?.clientVpn?.endpointHourly || 0.05;
+      const connectionHourly = pricing.vpnConnection?.clientVpn?.connectionHourly || 0.05;
+      
+      // Estimate 1 active connection
+      const estimatedConnections = 1;
+      const endpointCost = hourlyPrice * HOURS_PER_MONTH;
+      const connectionCost = connectionHourly * estimatedConnections * HOURS_PER_MONTH;
+      const monthlyCost = endpointCost + connectionCost;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::EC2::ClientVpnEndpoint',
+        monthlyCost,
+        hourlyCost: hourlyPrice + (connectionHourly * estimatedConnections),
+        unit: 'endpoint',
+        details: [
+          {
+            component: 'Client VPN Endpoint',
+            quantity: HOURS_PER_MONTH,
+            unitPrice: hourlyPrice,
+            monthlyCost: endpointCost,
+            unit: 'hours',
+          },
+          {
+            component: 'VPN Connection (est. 1)',
+            quantity: estimatedConnections * HOURS_PER_MONTH,
+            unitPrice: connectionHourly,
+            monthlyCost: connectionCost,
+            unit: 'connection-hours',
+          }
+        ],
+        confidence: 'medium',
+      };
+    });
+
+    // EC2 Traffic Mirror Session
+    calculators.set('AWS::EC2::TrafficMirrorSession', (logicalId, resource, template, pricing) => {
+      const hourlyPrice = pricing.trafficMirror?.sessionHourly || 0.15;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::EC2::TrafficMirrorSession',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'session',
+        details: [{
+          component: 'Traffic Mirror Session',
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'high',
+      };
+    });
+
+    // EC2 Transit Gateway Peering Attachment
+    calculators.set('AWS::EC2::TransitGatewayPeeringAttachment', (logicalId, resource, template, pricing) => {
+      const hourlyPrice = pricing.transitGateway?.peering || 0.05;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::EC2::TransitGatewayPeeringAttachment',
+        monthlyCost,
+        hourlyCost: hourlyPrice,
+        unit: 'attachment',
+        details: [{
+          component: 'Transit Gateway Peering Attachment',
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'high',
+      };
+    });
+
+    // EC2 Dedicated Host
+    calculators.set('AWS::EC2::Host', (logicalId, resource, template, pricing) => {
+      const instanceType = TemplateParser.getPropertyValue(template, resource, 'InstanceType', 'm5.large') as string;
+      // Use dedicated host pricing or fallback to instance price + 10%
+      const hostPrice = pricing.ec2?.hosts?.[instanceType] || (pricing.ec2?.instances?.[instanceType] || 0.096) * 1.1;
+      const monthlyCost = hostPrice * HOURS_PER_MONTH;
+
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::EC2::Host',
+        monthlyCost,
+        hourlyCost: hostPrice,
+        unit: 'host',
+        details: [{
+          component: `Dedicated Host (${instanceType})`,
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hostPrice,
+          monthlyCost,
+          unit: 'hours',
+        }],
+        confidence: 'medium',
+      };
+    });
+
+    // EKS Nodegroup
+    calculators.set('AWS::EKS::Nodegroup', (logicalId, resource, template, pricing) => {
+      const scalingConfig = resource.Properties?.ScalingConfig as any;
+      const desiredSize = scalingConfig?.DesiredSize || scalingConfig?.MinSize || 1;
+      
+      const instanceTypes = (resource.Properties?.InstanceTypes as string[]) || ['t3.medium'];
+      const instanceType = instanceTypes[0];
+      
+      const hourlyPrice = pricing.ec2.instances[instanceType] || pricing.ec2.instances['t3.medium'] || 0.0416;
+      const monthlyCost = hourlyPrice * HOURS_PER_MONTH * desiredSize;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::EKS::Nodegroup',
+        monthlyCost,
+        hourlyCost: hourlyPrice * desiredSize,
+        unit: 'nodegroup',
+        details: [{
+          component: `EKS Node Group (${desiredSize} x ${instanceType})`,
+          quantity: desiredSize * HOURS_PER_MONTH,
+          unitPrice: hourlyPrice,
+          monthlyCost,
+          unit: 'instance-hours',
+        }],
+        confidence: 'medium',
+      };
+    });
+
+    // EKS Fargate Profile
+    calculators.set('AWS::EKS::FargateProfile', (logicalId, resource, template, pricing) => {
+      // Estimate 1 pod running continuously
+      // vCPU: 0.25, Memory: 0.5 GB (small pod)
+      const vcpuHourly = pricing.eks?.fargateVcpuHourly || pricing.fargate?.vcpuHourly || 0.04048;
+      const memoryHourly = pricing.eks?.fargateMemoryGBHourly || pricing.fargate?.memoryGBHourly || 0.004445;
+      
+      const estimatedVcpu = 0.25;
+      const estimatedMemory = 0.5;
+      
+      const hourlyCost = (vcpuHourly * estimatedVcpu) + (memoryHourly * estimatedMemory);
+      const monthlyCost = hourlyCost * HOURS_PER_MONTH;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::EKS::FargateProfile',
+        monthlyCost,
+        hourlyCost,
+        unit: 'profile',
+        details: [{
+          component: 'Fargate Pods (est. 1 small pod)',
+          quantity: HOURS_PER_MONTH,
+          unitPrice: hourlyCost,
+          monthlyCost,
+          unit: 'pod-hours',
+        }],
+        confidence: 'low',
+      };
+    });
+
+    // Glue Database
+    calculators.set('AWS::Glue::Database', (logicalId, resource, template, pricing) => {
+      // Estimate small metadata storage
+      // Pricing is for Data Catalog storage (per 100K objects? No, usually per GB or requests)
+      // Infracost uses 100KB placeholder or similar? 
+      // AWS Glue Data Catalog storage is free for the first million objects.
+      // Requests are $1.00 per million.
+      // So for a single database, cost is negligible/zero unless huge.
+      // But Infracost lists it.
+      
+      // Let's assume negligible unless we have usage data.
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Glue::Database',
+        monthlyCost: 0,
+        hourlyCost: 0,
+        unit: 'database',
+        details: [{
+          component: 'Glue Database (free tier/negligible)',
+          quantity: 1,
+          unitPrice: 0,
+          monthlyCost: 0,
+          unit: 'database',
+        }],
+        confidence: 'high',
+      };
+    });
+
+    // Config Recorder
+    calculators.set('AWS::Config::ConfigurationRecorder', (logicalId, resource, template, pricing) => {
+      // $0.003 per configuration item recorded
+      // Estimate 1000 items per month
+      const itemPrice = pricing.config?.configItems || 0.003;
+      const estimatedItems = 1000;
+      const monthlyCost = estimatedItems * itemPrice;
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::Config::ConfigurationRecorder',
+        monthlyCost,
+        hourlyCost: monthlyCost / HOURS_PER_MONTH,
+        unit: 'recorder',
+        details: [{
+          component: 'Config Items Recorded (est. 1000/mo)',
+          quantity: estimatedItems,
+          unitPrice: itemPrice,
+          monthlyCost,
+          unit: 'items',
+        }],
+        confidence: 'low',
+      };
+    });
+
+    // SSM Activation
+    calculators.set('AWS::SSM::Activation', (logicalId, resource, template, pricing) => {
+      // Only Advanced instances cost money.
+      // But Activation resource doesn't specify tier explicitly? 
+      // It registers a managed instance. The instance tier is set on the instance (agent) or account settings.
+      // However, if we assume standard (default), it's free (up to 1000).
+      
+      return {
+        resourceId: logicalId,
+        resourceType: 'AWS::SSM::Activation',
+        monthlyCost: 0,
+        hourlyCost: 0,
+        unit: 'activation',
+        details: [{
+          component: 'SSM Activation (Standard)',
+          quantity: 1,
+          unitPrice: 0,
+          monthlyCost: 0,
+          unit: 'activation',
+        }],
+        confidence: 'medium',
+      };
+    });
+
     return calculators;
   }
   
@@ -2161,6 +2579,37 @@ export class CostCalculator {
         unitPrice: ecrPricing.storage,
         monthlyCost: storageCost,
         unit: 'GB/month',
+      }],
+      confidence: 'low',
+    };
+  }
+
+  /**
+   * Calculate Route 53 Record Set cost
+   */
+  private calculateRoute53RecordSetCost(
+    logicalId: string,
+    resource: CloudFormationResource,
+    template: CloudFormationTemplate
+  ): ResourceCost {
+    const queriesPrice = this.pricing.route53?.queries || 0.40;
+    
+    // Estimate 1M queries/month
+    const estimatedQueries = 1000000;
+    const monthlyCost = (estimatedQueries / 1000000) * queriesPrice;
+    
+    return {
+      resourceId: logicalId,
+      resourceType: 'AWS::Route53::RecordSet',
+      monthlyCost,
+      hourlyCost: monthlyCost / HOURS_PER_MONTH,
+      unit: 'record set',
+      details: [{
+        component: 'DNS Queries (est. 1M/mo)',
+        quantity: estimatedQueries,
+        unitPrice: queriesPrice / 1000000,
+        monthlyCost,
+        unit: 'queries',
       }],
       confidence: 'low',
     };

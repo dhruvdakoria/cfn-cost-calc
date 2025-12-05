@@ -1,0 +1,58 @@
+name: 'CloudFormation Cost Estimate'
+description: 'Compare deployed vs synthesized CDK stack costs'
+inputs:
+  cdk-out:
+    description: 'CDK output directory'
+    required: false
+    default: 'cdk.out'
+  region:
+    description: 'AWS region'
+    required: true
+  format:
+    description: 'Output format'
+    required: false
+    default: 'github'
+  output:
+    description: 'Output file path'
+    required: false
+    default: 'cost-estimate.md'
+outputs:
+  cost-estimate-path:
+    description: 'Path to the cost estimate output file'
+    value: ${{ steps.run-tool.outputs.cost-estimate-path }}
+runs:
+  using: "composite"
+  steps:
+    - name: Install Dependencies
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        if [ ! -d "node_modules" ]; then
+          npm ci --production --silent
+        fi
+
+    - name: Run Cost Estimate
+      id: run-tool
+      shell: bash
+      env:
+        AWS_REGION: ${{ inputs.region }}
+      run: |
+        # Ensure we are in the repository root or where cdk.out is relative to
+        # The action runs in the caller's workspace
+        
+        # We need to invoke the tool from the action path
+        TOOL_PATH="${{ github.action_path }}/dist/cli.js"
+        
+        echo "Running Cost Estimate Tool from $TOOL_PATH"
+        
+        node "$TOOL_PATH" compare \
+          --cdk-out "${{ inputs.cdk-out }}" \
+          --region "${{ inputs.region }}" \
+          --format "${{ inputs.format }}" \
+          --output "${{ inputs.output }}"
+          
+        # Set output path absolute or relative to workspace?
+        # The tool writes to inputs.output relative to CWD
+        # We return the path relative to workspace root
+        echo "cost-estimate-path=${{ inputs.output }}" >> $GITHUB_OUTPUT
+
